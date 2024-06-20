@@ -1,0 +1,139 @@
+shared:
+  task: "CLASSIFICATION"
+
+  # project configurations for experiment tracking - wandb
+  project: "learning-agency-lab-automated-essay-scoring-2"
+  entity: "hongnangao"
+  name: null
+  job_type: "train" # CHANGE
+  tags: null
+  group: null
+  notes: null
+  mode: null
+
+  # data configurations
+  train_filepath: "learning_agency_lab_automated_essay_scoring_2/data/train.csv"
+  valid_filepath: null
+  system_prompt: "Please read the following essay and assign a score of 1,2,3,4,5,6 where 6 is the best. Output only a single number with no explanation.\n\n"
+  essay_id: "essay_id"
+  full_text: "full_text"
+  score: "score"
+  label: "label"
+  num_labels: 6 # CHANGE
+
+  # split/resample strategy
+  resample_strategy: "StratifiedKFold"
+  resample_params:
+    n_splits: 15
+    shuffle: true
+    random_state: 42
+  group_by: null
+  stratify_by: "score"
+  fold_column: "fold"
+  target_column: "label"
+  fold: 0
+  debug_samples: 128
+  pretraining_data_filepath: null
+  external_data_filepath: "learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv"
+
+  # from_pretrained configurations
+  padding_side: "right" # CHANGE
+
+  # kwargs to tokenizer(...)
+  max_length: 1024 # CHANGE
+  truncation: true
+  return_tensors: null
+  add_special_tokens: false
+  padding: "longest"
+
+  return_tokenized_text: true
+
+  # peft
+  task_type: "SEQ_CLS"
+  inference_mode: false
+  r: 32
+  lora_alpha: 16
+  lora_dropout: 0.1
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
+  bias: "none"
+  modules_to_save: ["score"]
+
+  force_download: false
+  device_map: "auto"
+  torch_dtype: "float32" # CHANGE
+  load_in_4bit: false
+  output_hidden_states: false
+  output_attentions: false
+
+  pretrained_model_name_or_path: "microsoft/deberta-v3-base" # CHANGE
+  load_backbone_only: false
+  cache_dir: "/root/.cache/huggingface"
+  target_artifacts_dir: "/artifacts"
+
+  load_from: null
+  inference: false
+  use_lora: false
+  num_layers_to_remove: null
+  reinitialize_n_layers: 0
+  num_layers_to_freeze: null
+  freeze_embeddings: false
+
+  # seed
+  seed: 42
+  seed_torch: true
+  set_torch_deterministic: false
+
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1e-8
+  bf16: false
+  data_seed: null
+  dataloader_num_workers: 0
+  disable_tqdm: false
+  do_eval: true
+  do_predict: false
+  do_train: true
+  eval_strategy: "steps"
+  eval_steps: null
+  fp16: false
+  full_determinism: false
+  gradient_accumulation_steps: 1 # CHANGE
+  gradient_checkpointing: false
+  greater_is_better: true # CHANGE
+  include_tokens_per_second: false
+  label_smoothing_factor: 0.0
+  learning_rate: 0.00002 # CHANGE
+  load_best_model_at_end: true
+  logging_dir: null
+  logging_first_step: true
+  logging_steps: null
+  logging_strategy: "steps"
+  lr_scheduler_kwargs: {}
+  lr_scheduler_type: "linear" # CHANGE
+  max_grad_norm: 1.0
+  max_steps: null
+  metric_for_best_model: "eval_qwk" # CHANGE
+  num_train_epochs: 5 # CHANGE
+  optim: "adamw_torch"
+  output_dir: null
+  overwrite_output_dir: true
+  per_device_eval_batch_size: 8 # CHANGE
+  per_device_train_batch_size: 4 # CHANGE
+  prediction_loss_only: false
+  report_to: "wandb"
+  restore_callback_states_from_checkpoint: false
+  resume_from_checkpoint: null # CHANGE
+  save_only_model: false
+  save_on_each_node: false
+  save_safetensors: true
+  save_steps: null
+  save_strategy: "steps"
+  save_total_limit: 2
+  warmup_ratio: 0 # CHANGE
+  warmup_steps: 0
+  weight_decay: 0.01
+
+
+  base_learning_rate: 1e-5
+  desired_effective_batch_size: 16
+  enable_mixed_precision: true
