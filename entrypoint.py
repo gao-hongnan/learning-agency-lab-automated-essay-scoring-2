@@ -40,7 +40,7 @@ from src.callbacks import SaveLoraHeadCallback
 from src.dataset import load_data
 from src.logger import get_logger
 from src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from src.models import AttentionPooling, DebertaWithAttentionPooling
+from src.models import DebertaV2WithAttentionPooler
 from src.patches import deberta_v2_seq_cls_forward
 from src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
 from src.state import State, Statistics
@@ -90,14 +90,14 @@ class ImmutableProxy:
         ) from None
 
 
-# @app.function(
-#     image=IMAGE,
-#     gpu=A10_24_GPU,
-#     timeout=int(Constants.TIMEOUT),
-#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-# )
+@app.function(
+    image=IMAGE,
+    gpu=A10_24_GPU,
+    timeout=int(Constants.TIMEOUT),
+    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+)
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -281,7 +281,7 @@ def main(composer: Composer, state: State) -> None:
     #     cache_dir=composer.shared.cache_dir,
     #     config=base_model_config,
     # )
-    base_model = DebertaWithAttentionPooling(config=base_model_config)
+    base_model = DebertaV2WithAttentionPooler(config=base_model_config)
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
@@ -612,10 +612,10 @@ def main(composer: Composer, state: State) -> None:
     import json
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
-        f.write(json.dumps(composer.model_dump_json(exclude="torch_dtype"), indent=4))
+        f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-# @app.local_entrypoint()
+@app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -637,11 +637,11 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    main(composer, state)
-    # main.remote(composer, state)
+    # main(composer, state)
+    main.remote(composer, state)
 
 
-entrypoint("conf/deberta_reg.yaml")
+# entrypoint("conf/deberta_reg.yaml")
 
 # if __name__ == "__main__":
 #     yaml_path = sys.argv[1]
@@ -725,12 +725,12 @@ learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
 
 export ALLOW_WANDB=true && \
 modal run --detach \
-learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
---yaml-path=./learning_agency_lab_automated_essay_scoring_2/deberta_base_reg.yaml
+entrypoint \
+--yaml-path=./conf/deberta_base_reg.yaml
 
 export ALLOW_WANDB=true && \
 modal run --detach \
-learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
+learning_agency_lab_automated_essay_scoring_2.entrypoint \
 --yaml-path=./learning_agency_lab_automated_essay_scoring_2/deberta_base_cls.yaml
 """
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv

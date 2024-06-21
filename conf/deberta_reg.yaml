@@ -5,7 +5,7 @@ shared:
   project: "learning-agency-lab-automated-essay-scoring-2"
   entity: "hongnangao"
   name: null
-  job_type: "debug"
+  job_type: "train"
   tags: null
   group: null
   notes: null

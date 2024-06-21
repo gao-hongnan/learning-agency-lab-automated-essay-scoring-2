@@ -70,10 +70,10 @@ class AttentionPooler(nn.Module):
 
         self.dropout = nn.Dropout(self.pooler_dropout)
 
-        q_t = torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
-        self.q = nn.Parameter(q_t).float()
-        w_ht = torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
-        self.w_h = nn.Parameter(w_ht).float()
+        q_transform = torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
+        self.q = nn.Parameter(q_transform).float()
+        w_h_transform = torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
+        self.w_h = nn.Parameter(w_h_transform).float()
 
     def forward(self, all_hidden_states: Tuple[torch.Tensor]) -> torch.Tensor:
         """Use deberta example:

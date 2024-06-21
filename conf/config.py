@@ -206,6 +206,10 @@ class Shared(BaseModel):
         description="Read https://huggingface.co/docs/transformers/en/main_classes/output",
     )
 
+    ## pooler
+    pooler_type: Literal["mean", "attention", "gem"] = "attention"
+    pooler_config: dict[str, Any] = {}
+
     # ???
     pretrained_model_name_or_path: str = "mistralai/Mistral-7B-Instruct-v0.2"
     load_backbone_only: bool = False
