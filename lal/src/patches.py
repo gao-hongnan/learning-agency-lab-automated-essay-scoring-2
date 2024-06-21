@@ -5,7 +5,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from transformers.modeling_outputs import SequenceClassifierOutput, BaseModelOutput
+from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
 
 
 def deberta_v2_seq_cls_forward(
@@ -81,9 +81,9 @@ def deberta_v2_seq_cls_forward(
         output = (logits,) + outputs[1:]
         return ((loss,) + output) if loss is not None else output
 
-    # FIXME: HF why even allow return hidden states if it is going to overflow gpu memory?
-    outputs.hidden_states = None
-    outputs.attentions = None
     return SequenceClassifierOutput(
-        loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions
+        loss=loss,
+        logits=logits,
+        hidden_states=None,
+        attentions=None,
     )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import Tuple
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -70,14 +71,15 @@ class AttentionPooler(nn.Module):
 
         self.dropout = nn.Dropout(self.pooler_dropout)
 
-
-        q_transform = np.random.normal(loc=0.0, scale=0.1, size=(1, self.hidden_size)) # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
-#        self.q = nn.Parameter(q_transform).float()
+        q_transform = np.random.normal(
+            loc=0.0, scale=0.1, size=(1, self.hidden_size)
+        )  # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
+        #        self.q = nn.Parameter(q_transform).float()
         self.q = nn.Parameter(torch.from_numpy(q_transform)).float()
 
         w_h_transform = np.random.normal(
             loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc)
-        ) # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
+        )  # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
         # self.w_h = nn.Parameter(w_h_transform).float()
         self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
 
@@ -150,7 +152,7 @@ class AttentionPooler(nn.Module):
 
 
 class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
-    def __init__(self, config: DebertaV2Config):
+    def __init__(self, config: DebertaV2Config) -> None:
         super().__init__(config)
 
         num_labels = getattr(config, "num_labels", 2)
@@ -172,6 +174,12 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         self.dropout = StableDropout(drop_out)
 
         self.post_init()
+
+    def get_input_embeddings(self):
+        return self.deberta.get_input_embeddings()
+
+    def set_input_embeddings(self, new_embeddings):
+        self.deberta.set_input_embeddings(new_embeddings)
 
     def forward(
         self,
@@ -217,16 +225,11 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
                     labels = labels.long()
                     if label_index.size(0) > 0:
                         labeled_logits = torch.gather(
-                            logits,
-                            0,
-                            label_index.expand(label_index.size(0), logits.size(1)),
+                            logits, 0, label_index.expand(label_index.size(0), logits.size(1))
                         )
                         labels = torch.gather(labels, 0, label_index.view(-1))
                         loss_fct = CrossEntropyLoss()
-                        loss = loss_fct(
-                            labeled_logits.view(-1, self.num_labels).float(),
-                            labels.view(-1),
-                        )
+                        loss = loss_fct(labeled_logits.view(-1, self.num_labels).float(), labels.view(-1))
                     else:
                         loss = torch.tensor(0).to(logits)
                 else:
@@ -251,7 +254,7 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         return SequenceClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=None, # FIXME: HF why even allow return hidden states if it is going to overflow gpu memory?
+            hidden_states=None,  # FIXME: HF why even allow return hidden states if it is going to overflow gpu memory?
             attentions=None,
         )
 

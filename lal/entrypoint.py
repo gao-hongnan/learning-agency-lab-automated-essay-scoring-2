@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 import torch
 import torch.distributed
+import wandb
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
@@ -34,13 +35,24 @@ from transformers.modeling_outputs import ModelOutput
 from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
-import wandb
-from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app, IN_MODAL, A100_40_GPU, H100_80_GPU
+from .conf.config import (
+    A10_24_GPU,
+    A100_40_GPU,
+    ALLOW_WANDB,
+    H100_80_GPU,
+    IMAGE,
+    IN_MODAL,
+    VOLUME,
+    Composer,
+    Constants,
+    Shared,
+    app,
+)
 from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import DebertaV2WithAttentionPooler, AttentionPooler
+from .src.models import AttentionPooler, DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
 from .src.state import State, Statistics
@@ -265,8 +277,6 @@ def main(composer: Composer, state: State) -> None:
         )  # see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined
 
     pprint(base_model_config)
-    # update this at the end?
-    state.base_model_config = base_model_config
 
     # load base model
     # NOTE: we are using `AutoModel` here instead of `AutoModelForCausalLM`
@@ -285,20 +295,19 @@ def main(composer: Composer, state: State) -> None:
         )
     elif composer.shared.pooler_type == "attention":
         base_model = DebertaV2WithAttentionPooler(config=base_model_config)
-    base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
-    base_model.pooler = AttentionPooler(
-        num_hidden_layers=base_model.config.num_hidden_layers,
-        hidden_size=base_model.config.hidden_size,
-        pooler_hidden_dim_fc=base_model.config.hidden_size,
-        pooler_dropout=base_model.config.pooler_dropout,
-    )
+
+    # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
+    # base_model.pooler = AttentionPooler(
+    #     num_hidden_layers=base_model.config.num_hidden_layers,
+    #     hidden_size=base_model.config.hidden_size,
+    #     pooler_hidden_dim_fc=base_model.config.hidden_size,
+    #     pooler_dropout=base_model.config.pooler_dropout,
+    # )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
         base_model.resize_token_embeddings(len(tokenizer))
         base_model_config.vocab_size = len(tokenizer)  # update
-
-
 
     pprint(base_model)
     base_model_named_modules = get_named_modules(base_model)
@@ -314,6 +323,8 @@ def main(composer: Composer, state: State) -> None:
             base_model.config.to_dict(),
             base_model_config.to_dict(),
         )
+    # update this at the end?
+    state.base_model_config = base_model.config.to_dict()
 
     # NOTE: base model params
     base_model_total_params = total_parameters(base_model)
@@ -440,12 +451,12 @@ def main(composer: Composer, state: State) -> None:
         total_train_steps=total_train_steps,
         base_model_total_params=base_model_total_params,
         base_model_total_trainable_params=base_model_total_trainable_params,
-        base_model_with_adapter_total_params=None
-        if not composer.shared.use_lora
-        else base_model_with_adapter_total_params,
-        base_model_with_adapter_total_trainable_params=None
-        if not composer.shared.use_lora
-        else base_model_with_adapter_total_trainable_params,
+        base_model_with_adapter_total_params=(
+            None if not composer.shared.use_lora else base_model_with_adapter_total_params
+        ),
+        base_model_with_adapter_total_trainable_params=(
+            None if not composer.shared.use_lora else base_model_with_adapter_total_trainable_params
+        ),
     )
     pprint(statistics)
 
@@ -641,9 +652,9 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-
     # main(composer, state)
     main.remote(composer, state)
+
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")
