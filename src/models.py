@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import logging
 import warnings
+from typing import Tuple
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
+from transformers.models.deberta_v2.modeling_deberta_v2 import (
+    DebertaV2Config,
+    DebertaV2Model,
+    DebertaV2PreTrainedModel,
+    StableDropout,
+)
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -18,7 +26,7 @@ def get_all_hidden_states(backbone_outputs):
     return all_hidden_states
 
 
-class AttentionPooling(nn.Module):
+class AttentionPooler(nn.Module):
     def __init__(
         self,
         num_hidden_layers: int,
@@ -26,7 +34,7 @@ class AttentionPooling(nn.Module):
         pooler_hidden_dim_fc: int,
         pooler_dropout: float = 0.0,
     ):
-        """Initialize the AttentionPooling layer. Tested with `Deberta` model
+        """Initialize the AttentionPooler layer. Tested with `Deberta` model
         but not limited to it. You may have to change some config names if you
         want to use it for decoder only models like `Mistral`.
 
@@ -57,18 +65,22 @@ class AttentionPooling(nn.Module):
         super().__init__()
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
+        self.pooler_hidden_dim_fc = pooler_hidden_dim_fc
         self.pooler_dropout = pooler_dropout
 
-        self.pooler_hidden_dim_fc = pooler_hidden_dim_fc
         self.dropout = nn.Dropout(self.pooler_dropout)
 
-        q_t = np.random.normal(loc=0.0, scale=0.1, size=(1, self.hidden_size))
-        self.q = nn.Parameter(torch.from_numpy(q_t)).float()
-        w_ht = np.random.normal(loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
-        self.w_h = nn.Parameter(torch.from_numpy(w_ht)).float()
+        q_t = torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
+        self.q = nn.Parameter(q_t).float()
+        w_ht = torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
+        self.w_h = nn.Parameter(w_ht).float()
 
-    def forward(self, backbone_outputs):
+    def forward(self, all_hidden_states: Tuple[torch.Tensor]) -> torch.Tensor:
         """Use deberta example:
+        See `SequenceClassifierOutput` `hidden_states` shapeis a tuple of all
+        layers hidden states - including the embedding layer - but we want the
+        hidden layers.
+
          In `DebertaV2ForSequenceClassification`, we have:
 
          1. `outputs = self.deberta(...)` in `forward` method, call it `backbone_outputs`.
@@ -79,11 +91,11 @@ class AttentionPooling(nn.Module):
              `(batch_size, sequence_length, hidden_size)`): Sequence of hidden-states at the output of the last layer of the model.
         3. So we know this shape is `(batch_size, sequence_length, hidden_size)`.
         """
-        self.q = self.q.to(backbone_outputs[0].device)
-        self.w_h = self.w_h.to(backbone_outputs[0].device)
+        self.q = self.q.to(all_hidden_states[0].device)
+        self.w_h = self.w_h.to(all_hidden_states[0].device)
 
-        # all layers hidden states
-        all_hidden_states = get_all_hidden_states(backbone_outputs)
+        # convert tuple of tensors to tensors
+        all_hidden_states = torch.stack(all_hidden_states)  # type: ignore[assignment]
 
         hidden_states = torch.stack(
             [
@@ -99,10 +111,10 @@ class AttentionPooling(nn.Module):
         out = self.dropout(out)
         return out
 
-    def attention(self, h):
-        v = torch.matmul(self.q, h.transpose(-2, -1)).squeeze(1)
+    def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        v = torch.matmul(self.q, hidden_states.transpose(-2, -1)).squeeze(1)
         v = F.softmax(v, -1)
-        v_temp = torch.matmul(v.unsqueeze(1), h).transpose(-2, -1)
+        v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
         v = torch.matmul(self.w_h.transpose(1, 0), v_temp).squeeze(2)
         return v
 
@@ -129,6 +141,113 @@ class AttentionPooling(nn.Module):
         """
 
         return self.pooler_hidden_dim_fc
+
+
+class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
+    def __init__(self, config: DebertaV2Config):
+        super().__init__(config)
+
+        num_labels = getattr(config, "num_labels", 2)
+        self.num_labels = num_labels
+
+        self.deberta = DebertaV2Model(config)
+        self.pooler = AttentionPooler(
+            num_hidden_layers=config.num_hidden_layers,
+            hidden_size=config.hidden_size,
+            pooler_hidden_dim_fc=config.hidden_size,
+            pooler_dropout=config.pooler_dropout,
+        )
+
+        output_dim = self.pooler.output_dim
+        self.classifier = nn.Linear(output_dim, num_labels)
+
+        drop_out = getattr(config, "cls_dropout", None)
+        drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
+        self.dropout = StableDropout(drop_out)
+
+        self.post_init()
+
+    def forward(
+        self,
+        input_ids: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        token_type_ids: torch.Tensor | None = None,
+        position_ids: torch.Tensor | None = None,
+        inputs_embeds: torch.Tensor | None = None,
+        labels: torch.Tensor | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = True,
+        return_dict: bool | None = None,
+    ) -> Tuple[torch.FloatTensor, ...] | SequenceClassifierOutput:
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs: BaseModelOutput = self.deberta(
+            input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        all_hidden_states: Tuple[torch.FloatTensor, ...] = outputs.hidden_states
+
+        pooled_output = self.pooler(all_hidden_states)
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    # regression task
+                    loss_fn = nn.MSELoss()
+                    logits = logits.view(-1).to(labels.dtype)
+                    loss = loss_fn(logits, labels.view(-1))
+                elif labels.dim() == 1 or labels.size(-1) == 1:
+                    label_index = (labels >= 0).nonzero()
+                    labels = labels.long()
+                    if label_index.size(0) > 0:
+                        labeled_logits = torch.gather(
+                            logits,
+                            0,
+                            label_index.expand(label_index.size(0), logits.size(1)),
+                        )
+                        labels = torch.gather(labels, 0, label_index.view(-1))
+                        loss_fct = CrossEntropyLoss()
+                        loss = loss_fct(
+                            labeled_logits.view(-1, self.num_labels).float(),
+                            labels.view(-1),
+                        )
+                    else:
+                        loss = torch.tensor(0).to(logits)
+                else:
+                    log_softmax = nn.LogSoftmax(-1)
+                    loss = -((log_softmax(logits) * labels).sum(-1)).mean()
+            elif self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=None,  # FIXME: will OOM during evaluation
+            attentions=None,
+        )
 
 
 # class DecoderBackbone(nn.Module):

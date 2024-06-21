@@ -334,3 +334,9 @@ class Composer(BaseModel):
     """Configurations composed."""
 
     shared: Shared = Field(default_factory=Shared)
+
+    class Config:
+        """Pydantic configuration."""
+
+        arbitrary_types_allowed = True
+        use_enum_values = True

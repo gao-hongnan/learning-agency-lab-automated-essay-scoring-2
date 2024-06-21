@@ -10,7 +10,6 @@ from typing import Any
 import pandas as pd
 import torch
 import torch.distributed
-import wandb
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
@@ -35,12 +34,13 @@ from transformers.modeling_outputs import ModelOutput
 from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
+import wandb
 from conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app
 from src.callbacks import SaveLoraHeadCallback
 from src.dataset import load_data
 from src.logger import get_logger
 from src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from src.models import AttentionPooling
+from src.models import AttentionPooling, DebertaWithAttentionPooling
 from src.patches import deberta_v2_seq_cls_forward
 from src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
 from src.state import State, Statistics
@@ -90,14 +90,14 @@ class ImmutableProxy:
         ) from None
 
 
-@app.function(
-    image=IMAGE,
-    gpu=A10_24_GPU,
-    timeout=int(Constants.TIMEOUT),
-    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-)
+# @app.function(
+#     image=IMAGE,
+#     gpu=A10_24_GPU,
+#     timeout=int(Constants.TIMEOUT),
+#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+# )
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -274,26 +274,27 @@ def main(composer: Composer, state: State) -> None:
     # which is what we want as we are going to replace it with a custom head.
     # So you can think of `AutoModel` to be a "backbone" without the head.
     # see https://discuss.huggingface.co/t/difference-between-automodel-and-automodelforlm/5967
-    base_model = load_model(
-        pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
-        load_backbone_only=composer.shared.load_backbone_only,
-        task=composer.shared.task,
-        cache_dir=composer.shared.cache_dir,
-        config=base_model_config,
-    )
+    # base_model = load_model(
+    #     pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
+    #     load_backbone_only=composer.shared.load_backbone_only,
+    #     task=composer.shared.task,
+    #     cache_dir=composer.shared.cache_dir,
+    #     config=base_model_config,
+    # )
+    base_model = DebertaWithAttentionPooling(config=base_model_config)
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
         base_model.resize_token_embeddings(len(tokenizer))
         base_model_config.vocab_size = len(tokenizer)  # update
 
-    base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
-    base_model.pooler = AttentionPooling(
-        num_hidden_layers=base_model.config.num_hidden_layers,
-        hidden_size=base_model.config.hidden_size,
-        pooler_hidden_dim_fc=base_model.config.hidden_size,
-        pooler_dropout=base_model.config.pooler_dropout,
-    )
+    # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
+    # base_model.pooler = AttentionPooling(
+    #     num_hidden_layers=base_model.config.num_hidden_layers,
+    #     hidden_size=base_model.config.hidden_size,
+    #     pooler_hidden_dim_fc=base_model.config.hidden_size,
+    #     pooler_dropout=base_model.config.pooler_dropout,
+    # )
 
     pprint(base_model)
     base_model_named_modules = get_named_modules(base_model)
@@ -399,7 +400,7 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.logging_steps = total_train_steps // 2
         composer.shared.eval_steps = total_train_steps // 2
         composer.shared.save_steps = composer.shared.eval_steps * 2
-        composer.shared.per_device_train_batch_size = 1
+        composer.shared.per_device_train_batch_size = 2
         composer.shared.per_device_eval_batch_size = 2
         composer.shared.num_train_epochs = 1
     else:
@@ -611,10 +612,10 @@ def main(composer: Composer, state: State) -> None:
     import json
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
-        f.write(json.dumps(composer.model_dump(mode="json"), indent=4))
+        f.write(json.dumps(composer.model_dump_json(exclude="torch_dtype"), indent=4))
 
 
-@app.local_entrypoint()
+# @app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -636,11 +637,12 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    # main(composer, state)
-    main.remote(composer, state)
+    main(composer, state)
+    # main.remote(composer, state)
 
 
-# entrypoint("learning_agency_lab_automated_essay_scoring_2/deberta_base_reg.yaml")
+entrypoint("conf/deberta_reg.yaml")
+
 # if __name__ == "__main__":
 #     yaml_path = sys.argv[1]
 #     args_list = sys.argv[2:]
@@ -737,63 +739,8 @@ learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
 # modal volume get artifacts-volume output_v20240616054048/checkpoint-4050 .
 
 """
-fold  label
-0     0.0      179
-│     1.0      675
-│     2.0      898
-│     3.0      560
-│     4.0      139
-│     5.0       22
-1     0.0      179
-│     1.0      675
-│     2.0      897
-│     3.0      561
-│     4.0      138
-│     5.0       23
-2     0.0      179
-│     1.0      675
-│     2.0      897
-│     3.0      561
-│     4.0      138
-│     5.0       23
-3     0.0      179
-│     1.0      675
-│     2.0      897
-│     3.0      561
-│     4.0      138
-│     5.0       22
-4     0.0      178
-│     1.0      675
-│     2.0      897
-│     3.0      561
-│     4.0      139
-│     5.0       22
-5     0.0      179
-│     1.0      674
-│     2.0      897
-│     3.0      561
-│     4.0      139
-│     5.0       22
-6     0.0      179
-│     1.0      674
-│     2.0      897
-│     3.0      561
-│     4.0      139
-│     5.0       22
-dtype: int64
-INFO: 2024-06-21 02:14:55,049: learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer  Train DataFrame shape: (14835, 5), Valid DataFrame shape: (2472, 5)
-  essay_id                                          full_text  ...  label  fold
-0  000d118  Many people have car where they live. The thin...  ...    2.0     4
-1  000fe60  I am a scientist at NASA that is discussing th...  ...    2.0     5
-2  001ab80  People always wish they had the same technolog...  ...    3.0     1
-3  001bdc0  We all heard about Venus, the planet without a...  ...    3.0     1
-4  0030e86  If I were to choose between keeping the electo...  ...    3.0     2
+array(0.49022794, dtype=float32)
 
-[5 rows x 5 columns]
-  essay_id                                          full_text  ...  label  fold
-0  002ba53  Dear, State Senator\n\nThis is a letter to arg...  ...    2.0     3
-1  0040e27  There are many reasons why you should join sea...  ...    2.0     3
-2  0047cb3  "It's a good oppurtunity to take away stress a...  ...    1.0     3
-3  006d0e1  Have you ever seen Europe? What about China, o...  ...    3.0     3
-4  0079938  I don't like the idea of driveless cars. I fee...  ...    2.0     3
+array(-0.12705599, dtype=float32)
+Validation QWK Score = -0.06416748545083517
 """

@@ -8,7 +8,7 @@ import psutil
 from datasets import Dataset
 from transformers import PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
-from .config import Composer
+from conf.config import Composer
 
 logger = logging.getLogger(__name__)
 
@@ -162,11 +162,11 @@ def create_dataset(
     )
     print(ds.column_names)
     columns_to_remove = [
-        composer.dataset_config.essay_id,
-        composer.dataset_config.full_text,
-        composer.dataset_config.score,
+        composer.shared.essay_id,
+        composer.shared.full_text,
+        composer.shared.score,
         composer.shared.fold_column,
-        composer.dataset_config.label,
+        composer.shared.label,
         composer.shared.group_by,
     ]
     existing_columns = [col for col in columns_to_remove if col in ds.column_names]
