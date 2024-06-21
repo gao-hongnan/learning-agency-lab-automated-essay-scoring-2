@@ -207,7 +207,7 @@ class Shared(BaseModel):
     )
 
     ## pooler
-    pooler_type: Literal["mean", "attention", "gem"] = "attention"
+    pooler_type: Literal["mean", "attention", "gem"] | None = None
     pooler_config: dict[str, Any] = {}
 
     # ???

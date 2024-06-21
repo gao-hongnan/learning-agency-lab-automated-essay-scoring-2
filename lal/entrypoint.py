@@ -35,12 +35,12 @@ from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
 import wandb
-from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app, IN_MODAL, A100_40_GPU
+from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app, IN_MODAL, A100_40_GPU, H100_80_GPU
 from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import DebertaV2WithAttentionPooler
+from .src.models import DebertaV2WithAttentionPooler, AttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
 from .src.state import State, Statistics
@@ -92,7 +92,7 @@ class ImmutableProxy:
 
 @app.function(
     image=IMAGE,
-    gpu=A100_40_GPU,
+    gpu=H100_80_GPU,
     timeout=int(Constants.TIMEOUT),
     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
@@ -274,27 +274,31 @@ def main(composer: Composer, state: State) -> None:
     # which is what we want as we are going to replace it with a custom head.
     # So you can think of `AutoModel` to be a "backbone" without the head.
     # see https://discuss.huggingface.co/t/difference-between-automodel-and-automodelforlm/5967
-    # base_model = load_model(
-    #     pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
-    #     load_backbone_only=composer.shared.load_backbone_only,
-    #     task=composer.shared.task,
-    #     cache_dir=composer.shared.cache_dir,
-    #     config=base_model_config,
-    # )
-    base_model = DebertaV2WithAttentionPooler(config=base_model_config)
+
+    if composer.shared.pooler_type is None:
+        base_model = load_model(
+            pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
+            load_backbone_only=composer.shared.load_backbone_only,
+            task=composer.shared.task,
+            cache_dir=composer.shared.cache_dir,
+            config=base_model_config,
+        )
+    elif composer.shared.pooler_type == "attention":
+        base_model = DebertaV2WithAttentionPooler(config=base_model_config)
+    base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
+    base_model.pooler = AttentionPooler(
+        num_hidden_layers=base_model.config.num_hidden_layers,
+        hidden_size=base_model.config.hidden_size,
+        pooler_hidden_dim_fc=base_model.config.hidden_size,
+        pooler_dropout=base_model.config.pooler_dropout,
+    )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
         base_model.resize_token_embeddings(len(tokenizer))
         base_model_config.vocab_size = len(tokenizer)  # update
 
-    # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
-    # base_model.pooler = AttentionPooling(
-    #     num_hidden_layers=base_model.config.num_hidden_layers,
-    #     hidden_size=base_model.config.hidden_size,
-    #     pooler_hidden_dim_fc=base_model.config.hidden_size,
-    #     pooler_dropout=base_model.config.pooler_dropout,
-    # )
+
 
     pprint(base_model)
     base_model_named_modules = get_named_modules(base_model)

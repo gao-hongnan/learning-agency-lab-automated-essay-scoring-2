@@ -70,6 +70,10 @@ shared:
   output_hidden_states: true
   output_attentions: false
 
+  # pooler
+  pooler_type: null
+  pooler_config: {}
+
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
@@ -122,8 +126,8 @@ shared:
   optim: "adamw_torch"
   output_dir: null
   overwrite_output_dir: true
-  per_device_eval_batch_size: 8 # CHANGE
-  per_device_train_batch_size: 4 # CHANGE
+  per_device_eval_batch_size: 16 # CHANGE
+  per_device_train_batch_size: 16 # CHANGE
   prediction_loss_only: false
   report_to: "wandb"
   restore_callback_states_from_checkpoint: false

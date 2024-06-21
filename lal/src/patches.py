@@ -5,7 +5,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from transformers.modeling_outputs import SequenceClassifierOutput
+from transformers.modeling_outputs import SequenceClassifierOutput, BaseModelOutput
 
 
 def deberta_v2_seq_cls_forward(
@@ -28,7 +28,7 @@ def deberta_v2_seq_cls_forward(
     """
     return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-    outputs = self.deberta(
+    outputs: BaseModelOutput = self.deberta(
         input_ids,
         token_type_ids=token_type_ids,
         attention_mask=attention_mask,
@@ -38,8 +38,9 @@ def deberta_v2_seq_cls_forward(
         output_hidden_states=output_hidden_states,
         return_dict=return_dict,
     )
-    encoder_layer = outputs[0]
-    pooled_output = self.pooler(outputs)
+    all_hidden_states: Tuple[torch.FloatTensor, ...] = outputs.hidden_states
+
+    pooled_output = self.pooler(all_hidden_states)
     pooled_output = self.dropout(pooled_output)
     logits = self.classifier(pooled_output)
 
