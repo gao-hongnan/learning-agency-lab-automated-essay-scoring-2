@@ -8,7 +8,7 @@ import psutil
 from datasets import Dataset
 from transformers import PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
-from conf.config import Composer
+from ..conf.config import Composer
 
 logger = logging.getLogger(__name__)
 

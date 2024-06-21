@@ -12,7 +12,7 @@ shared:
   mode: null
 
   # data configurations
-  train_filepath: "data/train.csv"
+  train_filepath: "lal/data/train.csv"
   valid_filepath: null
   system_prompt: "Please read the following essay and assign a score of 1,2,3,4,5,6 where 6 is the best. Output only a single number with no explanation.\n\n"
   essay_id: "essay_id"
@@ -39,7 +39,7 @@ shared:
   fold: 0
   debug_samples: 128
   pretraining_data_filepath: null
-  external_data_filepath: "data/persuade_2.0_human_scores_demo_id_github.csv"
+  external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
 
   # from_pretrained configurations
   padding_side: "right"

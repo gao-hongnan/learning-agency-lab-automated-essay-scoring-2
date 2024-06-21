@@ -35,16 +35,16 @@ from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
 import wandb
-from conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app
-from src.callbacks import SaveLoraHeadCallback
-from src.dataset import load_data
-from src.logger import get_logger
-from src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from src.models import DebertaV2WithAttentionPooler
-from src.patches import deberta_v2_seq_cls_forward
-from src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
-from src.state import State, Statistics
-from src.utils import load_model
+from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app
+from .src.callbacks import SaveLoraHeadCallback
+from .src.dataset import load_data
+from .src.logger import get_logger
+from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
+from .src.models import DebertaV2WithAttentionPooler
+from .src.patches import deberta_v2_seq_cls_forward
+from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
+from .src.state import State, Statistics
+from .src.utils import load_model
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
@@ -725,13 +725,13 @@ learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
 
 export ALLOW_WANDB=true && \
 modal run --detach \
-entrypoint \
---yaml-path=./conf/deberta_base_reg.yaml
+lal.entrypoint \
+--yaml-path=lal/conf/deberta_reg.yaml
 
 export ALLOW_WANDB=true && \
 modal run --detach \
 learning_agency_lab_automated_essay_scoring_2.entrypoint \
---yaml-path=./learning_agency_lab_automated_essay_scoring_2/deberta_base_cls.yaml
+--yaml-path=./learning_agency_lab_automated_essay_scoring_2/deberta_cls.yaml
 """
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
 # modal shell learning_agency_lab_automated_essay_scoring_2.chris

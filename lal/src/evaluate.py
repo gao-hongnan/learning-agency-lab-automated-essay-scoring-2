@@ -1,7 +1,6 @@
 from rich.pretty import pprint
 from transformers import AutoModelForSequenceClassification
 
-from src.models import DebertaWithAttentionPooling
 
 base_model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_name_or_path="/Users/gaohn/gaohn/learning-agency-lab-automated-essay-scoring-2/artifacts/output_v20240621175434"

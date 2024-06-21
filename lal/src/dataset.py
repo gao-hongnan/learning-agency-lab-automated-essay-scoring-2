@@ -6,7 +6,7 @@ from typing import Literal, Tuple
 
 import pandas as pd
 
-from src.logger import get_logger
+from .logger import get_logger
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
