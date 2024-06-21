@@ -104,7 +104,6 @@ class AttentionPooler(nn.Module):
 
         # convert tuple of tensors to tensors
         all_hidden_states = torch.stack(all_hidden_states)  # type: ignore[assignment]
-
         hidden_states = torch.stack(
             [
                 all_hidden_states[layer_i][:, 0].squeeze()
@@ -167,6 +166,7 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         )
 
         output_dim = self.pooler.output_dim
+        output_dim = config.hidden_size
         self.classifier = nn.Linear(output_dim, num_labels)
 
         drop_out = getattr(config, "cls_dropout", None)
@@ -174,6 +174,9 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         self.dropout = StableDropout(drop_out)
 
         self.post_init()
+
+        print(config)
+
 
     def get_input_embeddings(self):
         return self.deberta.get_input_embeddings()

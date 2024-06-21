@@ -5,3 +5,4 @@ modal==0.62.201
 pandas-stubs==2.2.2.240603
 rich==13.7.1
 datasets==2.20.0
+sentencepiece==0.2.0
