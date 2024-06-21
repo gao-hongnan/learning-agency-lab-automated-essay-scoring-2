@@ -35,7 +35,7 @@ from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
 import wandb
-from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app
+from .conf.config import A10_24_GPU, ALLOW_WANDB, IMAGE, VOLUME, Composer, Constants, Shared, app, IN_MODAL, A100_40_GPU
 from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
@@ -92,7 +92,7 @@ class ImmutableProxy:
 
 @app.function(
     image=IMAGE,
-    gpu=A10_24_GPU,
+    gpu=A100_40_GPU,
     timeout=int(Constants.TIMEOUT),
     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
@@ -637,11 +637,12 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
+
     # main(composer, state)
     main.remote(composer, state)
 
-
-# entrypoint("conf/deberta_reg.yaml")
+# if not IN_MODAL:
+#     entrypoint("lal/conf/deberta_reg.yaml")
 
 # if __name__ == "__main__":
 #     yaml_path = sys.argv[1]

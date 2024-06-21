@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import Tuple
-
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -70,10 +70,16 @@ class AttentionPooler(nn.Module):
 
         self.dropout = nn.Dropout(self.pooler_dropout)
 
-        q_transform = torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
-        self.q = nn.Parameter(q_transform).float()
-        w_h_transform = torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
-        self.w_h = nn.Parameter(w_h_transform).float()
+
+        q_transform = np.random.normal(loc=0.0, scale=0.1, size=(1, self.hidden_size)) # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
+#        self.q = nn.Parameter(q_transform).float()
+        self.q = nn.Parameter(torch.from_numpy(q_transform)).float()
+
+        w_h_transform = np.random.normal(
+            loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc)
+        ) # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
+        # self.w_h = nn.Parameter(w_h_transform).float()
+        self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
 
     def forward(self, all_hidden_states: Tuple[torch.Tensor]) -> torch.Tensor:
         """Use deberta example:
@@ -245,7 +251,7 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         return SequenceClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=None,  # FIXME: will OOM during evaluation
+            hidden_states=None, # FIXME: HF why even allow return hidden states if it is going to overflow gpu memory?
             attentions=None,
         )
 

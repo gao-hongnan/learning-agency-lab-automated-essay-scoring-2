@@ -36,7 +36,7 @@ shared:
   stratify_by: "score" # null # CHANGE
   fold_column: "fold"
   target_column: "label"
-  fold: 0
+  fold: 2
   debug_samples: 128
   pretraining_data_filepath: null
   external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
@@ -133,7 +133,7 @@ shared:
   save_safetensors: true
   save_steps: null
   save_strategy: "steps"
-  save_total_limit: 2
+  save_total_limit: 3
   warmup_ratio: 0 # CHANGE
   warmup_steps: 0
   weight_decay: 0.01

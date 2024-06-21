@@ -282,7 +282,7 @@ class Shared(BaseModel):
     logging_steps: int | None = None # derived in code
     save_strategy: Literal["no", "steps", "epoch"] = "steps"
     save_steps: int | None = None # derived in code
-    save_total_limit: int = 2
+    save_total_limit: int = 3
     save_safetensors: bool = True
     save_on_each_node: bool = False
     save_only_model: bool = False
