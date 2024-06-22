@@ -159,6 +159,7 @@ class Shared(BaseModel):
     debug_samples: int = 128
     pretraining_data_filepath: str | os.PathLike[str] | None = None
     external_data_filepath: str | os.PathLike[str] | None = None
+    predicted_prompt_filepath: str | os.PathLike[str] | None = None
 
     # tokenizer config
     ## from_pretrained(...)

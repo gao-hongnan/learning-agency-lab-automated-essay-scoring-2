@@ -35,6 +35,7 @@ from transformers import (
     PretrainedConfig,
     Trainer,
     TrainingArguments,
+    DebertaV2Tokenizer,
 )
 from transformers.modeling_outputs import ModelOutput
 from wandb.sdk.lib import RunDisabled
@@ -171,7 +172,7 @@ def main(composer: Composer, state: State) -> None:
     if composer.shared.group_by:
         df = add_prompt_name_group(
             df,
-            pd.read_csv("learning_agency_lab_automated_essay_scoring_2/data/predicted_prompt.csv"),
+            pd.read_csv(composer.shared.predicted_prompt_filepath),
         )
     if composer.shared.external_data_filepath:
         external_df = pd.read_csv(composer.shared.external_data_filepath)

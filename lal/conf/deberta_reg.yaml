@@ -22,17 +22,17 @@ shared:
   num_labels: 1 # CHANGE
 
   # split/resample strategy
-  resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
+  # resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
+  # resample_params:
+  #   n_splits: 7 # CHANGE
+  #   shuffle: true
+  #   random_state: 42
+  resample_strategy: "StratifiedGroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
   resample_params:
     n_splits: 7 # CHANGE
     shuffle: true
     random_state: 42
-  # resample_strategy: "GroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
-  # resample_params:
-  #   n_splits: 7 # CHANGE
-  #   # shuffle: true
-  #   # random_state: 42
-  group_by: null # "prompt_name" # CHANGE
+  group_by: "prompt_name" # "prompt_name" # CHANGE
   stratify_by: "score" # null # CHANGE
   fold_column: "fold"
   target_column: "label"
@@ -40,6 +40,7 @@ shared:
   debug_samples: 128
   pretraining_data_filepath: null
   external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
+  predicted_prompt_filepath: "lal/data/predicted_prompt.csv"
 
   # from_pretrained configurations
   padding_side: "right"
@@ -71,10 +72,10 @@ shared:
   output_attentions: false
 
   # pooler
-  pooler_type: null # CHANGE
+  pooler_type: attention # CHANGE
   pooler_config: {}
 
-  pretrained_model_name_or_path: "microsoft/deberta-v3-base"
+  pretrained_model_name_or_path: "microsoft/deberta-v3-small"
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
   target_artifacts_dir: "/artifacts"
@@ -118,7 +119,7 @@ shared:
   greater_is_better: true # CHANGE
   include_tokens_per_second: false
   label_smoothing_factor: 0.0
-  learning_rate: 0.00002 # CHANGE
+  learning_rate: 0.00003 # CHANGE
   load_best_model_at_end: true
   logging_dir: null
   logging_first_step: true
@@ -150,6 +151,6 @@ shared:
   weight_decay: 0.01
 
 
-  base_learning_rate: 0.00002 # CHANGE
+  base_learning_rate: 0.00003 # CHANGE
   desired_effective_batch_size: 16 # CHANGE
   enable_mixed_precision: true

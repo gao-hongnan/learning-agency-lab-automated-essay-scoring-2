@@ -40,6 +40,7 @@ shared:
   debug_samples: 128
   pretraining_data_filepath: null
   external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
+  predicted_prompt_filepath: "lal/data/predicted_prompt.csv"
 
   # from_pretrained configurations
   padding_side: "right"
