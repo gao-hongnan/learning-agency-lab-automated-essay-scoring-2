@@ -127,7 +127,7 @@ def preprocess(
 
     elif task in ["CLASSIFICATION", "REGRESSION"]:
         tokenized_sample = tokenizer(
-            sample["description"],
+            # sample["description"],
             sample["full_text"],
             max_length=max_length,
             truncation=truncation,

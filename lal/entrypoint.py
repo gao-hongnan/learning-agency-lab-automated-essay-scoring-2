@@ -331,6 +331,7 @@ def main(composer: Composer, state: State) -> None:
         pooler_hidden_dim_fc=base_model.config.hidden_size,
         pooler_dropout=base_model.config.pooler_dropout,
     )
+    base_model.pooler.apply(init_attention_pooler)
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
