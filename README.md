@@ -1,3 +1,10 @@
+# Learning Agency Lab Automated Essay Scoring 2
+
+## Attention Pooling Patch
+
+- 918d0f306a5c3e8c9ef0db1752c5e5116adbcfdb
+  - https://wandb.ai/gaohn-teaching-mlops/learning-agency-lab-automated-essay-scoring-2/runs/llem1kv0?nw=nwuserhongnangao
+
 ## [Training/Inference] Mixed Precision
 
 On a related topic, if I load a model in float32 and subsequently train it using mixed precision fp16 / bf16 mode, during inference, is it "ok" to load the model back in float16 as in some cases, the inference server may not have the same gpu specs as the training setup.
