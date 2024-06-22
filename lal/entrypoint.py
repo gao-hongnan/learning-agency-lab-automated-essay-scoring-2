@@ -63,7 +63,7 @@ from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
 from .src.models import AttentionPooler, DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
-from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
+from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels, merge_topic_info_to_df
 from .src.state import State, Statistics
 from .src.utils import dry_run, load_model
 
@@ -113,7 +113,7 @@ class ImmutableProxy:
 
 @app.function(
     image=IMAGE,
-    gpu=A100_40_GPU,
+    gpu=H100_80_GPU,
     timeout=int(Constants.TIMEOUT),
     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
@@ -168,6 +168,13 @@ def main(composer: Composer, state: State) -> None:
     logger.debug("DataFrame columns: %s, Shape: %s", df.columns.tolist(), df.shape)
 
     df = process_labels(df, task=composer.shared.task)
+
+    if composer.shared.topics_map_filepath:
+        df = merge_topic_info_to_df(
+            df,
+            train_topic_filepath=composer.shared.train_topic_filepath,
+            topics_map_path=composer.shared.topics_map_filepath,
+        )
 
     if composer.shared.group_by:
         df = add_prompt_name_group(

@@ -143,6 +143,7 @@ class Shared(BaseModel):
     full_text: str = "full_text"
     score: str = "score"
     label: str = "label"
+    description: str = "description"
 
     ## dataset split
     resample_strategy: Literal["StratifiedKFold", "KFold", "GroupKFold", "StratifiedGroupKFold"] = "StratifiedKFold"
@@ -160,6 +161,8 @@ class Shared(BaseModel):
     pretraining_data_filepath: str | os.PathLike[str] | None = None
     external_data_filepath: str | os.PathLike[str] | None = None
     predicted_prompt_filepath: str | os.PathLike[str] | None = None
+    train_topic_filepath: str | os.PathLike[str] | None = None
+    topics_map_filepath: str | os.PathLike[str] | None = None
 
     # tokenizer config
     ## from_pretrained(...)

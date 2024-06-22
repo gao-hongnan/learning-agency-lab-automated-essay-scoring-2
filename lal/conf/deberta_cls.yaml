@@ -19,6 +19,7 @@ shared:
   full_text: "full_text"
   score: "score"
   label: "label"
+  description: "description"
   num_labels: 6 # CHANGE
 
   # split/resample strategy
@@ -41,6 +42,8 @@ shared:
   pretraining_data_filepath: null
   external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
   predicted_prompt_filepath: "lal/data/predicted_prompt.csv"
+  train_topic_filepath: "lal/data/train_topic.csv"
+  topics_map_filepath: "lal/data/topics_map.json"
 
   # from_pretrained configurations
   padding_side: "right" # CHANGE

@@ -7,6 +7,7 @@ import pandas as pd
 import psutil
 from datasets import Dataset
 from transformers import PreTrainedTokenizerBase, PreTrainedTokenizerFast
+import json
 
 from ..conf.config import Composer
 
@@ -51,6 +52,19 @@ def process_labels(df: pd.DataFrame, task: str, target_column: str = "score") ->
 def add_prompt_name_group(df_1: pd.DataFrame, df_2: pd.DataFrame) -> pd.DataFrame:
     merged_df = pd.merge(df_1, df_2, on="essay_id", how="left")
     return merged_df[df_1.columns.tolist() + ["prompt_name"]].reset_index(drop=True)
+
+def merge_topic_info_to_df(df: pd.DataFrame, train_topic_filepath: str, topics_map_path: str) -> pd.DataFrame:
+    train_topic_df = pd.read_csv(train_topic_filepath)
+    train_topic_df = train_topic_df[['essay_id', 'topics']]
+    merge_df_and_train_topic = pd.merge(df, train_topic_df, on="essay_id", how="left")
+    with open(topics_map_path, 'r') as file:
+        topics_dict = json.load(file)
+
+    topics_df = pd.DataFrame(list(topics_dict.items()), columns=['topics', 'description'])
+    topics_df['topics'] = topics_df['topics'].astype(int)
+    final_merged_df = pd.merge(merge_df_and_train_topic, topics_df, on='topics', how='left')
+    final_merged_df = final_merged_df.drop(columns=['topics'])
+    return final_merged_df
 
 
 class TokenizedBatchDict(TypedDict):
@@ -113,6 +127,7 @@ def preprocess(
 
     elif task in ["CLASSIFICATION", "REGRESSION"]:
         tokenized_sample = tokenizer(
+            sample["description"],
             sample["full_text"],
             max_length=max_length,
             truncation=truncation,
@@ -168,6 +183,7 @@ def create_dataset(
         composer.shared.fold_column,
         composer.shared.label,
         composer.shared.group_by,
+        composer.shared.description,
     ]
     existing_columns = [col for col in columns_to_remove if col in ds.column_names]
     ds = ds.remove_columns(existing_columns)
