@@ -73,6 +73,9 @@ shared:
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
   target_artifacts_dir: "/artifacts"
+  verbose: true
+  show_model_summary: true
+  dry_run: true
 
   load_from: null
   inference: false

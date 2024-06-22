@@ -97,15 +97,15 @@ def load_model(
         )
 
 
-def dry_run(self, batch: dict[str, torch.Tensor]) -> dict[str, Any]:
+def dry_run(model: torch.nn.Module, batch: dict[str, torch.Tensor]) -> dict[str, Any]:
     """Dry run the model to check if the model is correctly set up."""
     try:
         with torch.no_grad():
-            self.eval()
-            self.forward(batch)
-            self.train()
-        return {"status": "dry_run_ok"}
+            model.eval()
+            outputs = model.forward(**batch)
+            model.train()
+        return {"status": "SUCCESS", "outputs": outputs}
 
     except Exception as exc:
         logger.exception("Dry run failed with exception %s", str(exc))
-        return {"status": "dry_run_failed", "exception": str(exc)}
+        return {"status": "FAILED", "exception": str(exc)}

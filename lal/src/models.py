@@ -22,9 +22,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 logger = logging.getLogger(__name__)
 
 
-def get_all_hidden_states(backbone_outputs):
-    all_hidden_states = torch.stack(backbone_outputs[1])
-    return all_hidden_states
+def init_attention_pooler(module: nn.Module) -> None:
+    if isinstance(module, nn.Linear):
+        # torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)
+        torch.nn.init.xavier_normal_(module.weight)
+        if module.bias is not None:
+            module.bias.data.fill_(0.0)
 
 
 class AttentionPooler(nn.Module):
@@ -109,9 +112,6 @@ class AttentionPooler(nn.Module):
              `(batch_size, sequence_length, hidden_size)`): Sequence of hidden-states at the output of the last layer of the model.
         3. So we know this shape is `(batch_size, sequence_length, hidden_size)`.
         """
-        # self.q = self.q.to(all_hidden_states[0].device)
-        # self.w_h = self.w_h.to(all_hidden_states[0].device)
-
         # convert tuple of tensors to tensors
         all_hidden_states = torch.stack(all_hidden_states)  # type: ignore[assignment]
         hidden_states = torch.stack(
@@ -217,8 +217,7 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
         self.dropout = StableDropout(drop_out)
 
         self.post_init()
-
-        print(config)
+        self.pooler.apply(init_attention_pooler)
 
     def get_input_embeddings(self):
         return self.deberta.get_input_embeddings()

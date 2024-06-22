@@ -63,7 +63,7 @@ IMAGE = (
         "torchvision~=0.16",
         "triton~=2.2.0",
         "peft==0.11.1",
-        "omniverse==0.0.36",
+        "omniverse==0.0.37",
         "tabulate",
     )
     .run_function(
@@ -215,6 +215,9 @@ class Shared(BaseModel):
     load_backbone_only: bool = False
     cache_dir: str = "/root/.cache/huggingface"
     target_artifacts_dir: str = "/artifacts"
+    verbose: bool = False
+    show_model_summary: bool = False
+    dry_run: bool = False
 
     load_from: str | None = None
 

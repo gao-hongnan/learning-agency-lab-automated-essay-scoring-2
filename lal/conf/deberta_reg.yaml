@@ -3,7 +3,7 @@ shared:
 
   # project configurations for experiment tracking - wandb
   project: "learning-agency-lab-automated-essay-scoring-2"
-  entity: "hongnangao"
+  entity: "gaohn-teaching-mlops"
   name: null
   job_type: "train"
   tags: null
@@ -71,13 +71,16 @@ shared:
   output_attentions: false
 
   # pooler
-  pooler_type: attention # CHANGE
+  pooler_type: null # CHANGE
   pooler_config: {}
 
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
   target_artifacts_dir: "/artifacts"
+  verbose: true
+  show_model_summary: true
+  dry_run: true
 
   load_from: null
   inference: false
@@ -122,7 +125,7 @@ shared:
   max_grad_norm: 1.0
   max_steps: null
   metric_for_best_model: "eval_qwk" # CHANGE
-  num_train_epochs: 5 # CHANGE
+  num_train_epochs: 4 # CHANGE
   optim: "adamw_torch"
   output_dir: null
   overwrite_output_dir: true

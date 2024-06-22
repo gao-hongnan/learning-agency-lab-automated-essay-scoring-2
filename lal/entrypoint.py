@@ -6,6 +6,7 @@ import logging
 import types
 from pathlib import Path
 from typing import Any
+import torchinfo
 
 import pandas as pd
 import torch
@@ -15,7 +16,12 @@ from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
 from omnivault.utils.reproducibility.seed import seed_all
 from omnivault.utils.torch_utils.hf_utils import maybe_resize_token_embeddings
-from omnivault.utils.torch_utils.model_utils import get_named_modules, total_parameters, total_trainable_parameters
+from omnivault.utils.torch_utils.model_utils import (
+    gather_weight_stats,
+    get_named_modules,
+    total_parameters,
+    total_trainable_parameters,
+)
 from omnivault.utils.train_utils.resampling import create_folds
 from peft import LoraConfig, get_peft_model
 from rich.pretty import pprint
@@ -57,7 +63,7 @@ from .src.models import AttentionPooler, DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels
 from .src.state import State, Statistics
-from .src.utils import load_model
+from .src.utils import dry_run, load_model
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
@@ -103,14 +109,14 @@ class ImmutableProxy:
         ) from None
 
 
-@app.function(
-    image=IMAGE,
-    gpu=H100_80_GPU,
-    timeout=int(Constants.TIMEOUT),
-    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-)
+# @app.function(
+#     image=IMAGE,
+#     gpu=H100_80_GPU,
+#     timeout=int(Constants.TIMEOUT),
+#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+# )
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -299,8 +305,6 @@ def main(composer: Composer, state: State) -> None:
     elif composer.shared.pooler_type == "attention":
         base_model = DebertaV2WithAttentionPooler(config=base_model_config)
 
-    pprint(base_model.pooler.state_dict().keys())
-
     # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
     # base_model.pooler = AttentionPooler(
     #     num_hidden_layers=base_model.config.num_hidden_layers,
@@ -315,14 +319,6 @@ def main(composer: Composer, state: State) -> None:
         base_model.resize_token_embeddings(len(tokenizer))
         base_model_config.vocab_size = len(tokenizer)  # update
 
-    pprint(base_model)
-    base_model_named_modules = get_named_modules(base_model)
-    # pprint(base_model_named_modules)
-    base_model_last_module_name = list(base_model_named_modules[-1].keys())[0]
-    if "dropout" in base_model_last_module_name:
-        base_model_last_module_name = list(base_model_named_modules[-2].keys())[0]
-    potential_target_modules = get_named_modules(base_model)
-
     if base_model.config.to_dict() != base_model_config.to_dict():
         logger.warning(
             "Model configuration mismatch. Base model config:\n%s\nModel config:\n%s",
@@ -332,41 +328,61 @@ def main(composer: Composer, state: State) -> None:
     # update this at the end?
     state.base_model_config = base_model.config.to_dict()
 
+    pprint(base_model)
+
+    # NOTE: get named modules and try to derive the last module name
+    base_model_named_modules = get_named_modules(base_model)
+    base_model_last_module_name = list(base_model_named_modules[-1].keys())[0]
+    if "dropout" in base_model_last_module_name:
+        base_model_last_module_name = list(base_model_named_modules[-2].keys())[0]
+
+    # NOTE: derive statistics of model/module's weights and bias weights distribution - sanity check if weight init is correct
+    base_model_weight_stats = gather_weight_stats(base_model)
+
     # NOTE: base model params
     base_model_total_params = total_parameters(base_model)
     base_model_total_trainable_params = total_trainable_parameters(base_model)
-    logger.info(
-        "Base model %s\ntotal trainable parameters: %.2fM\ntotal parameters: %.2fM",
-        base_model.__class__.__name__,
-        base_model_total_trainable_params / 1_000_000,
-        base_model_total_params / 1_000_000,
-    )
 
-    # DO DRY RUN
-    # pprint(base_model.score.weight[0].detach().cpu().numpy())
-    # pprint(base_model.classifier.weight[0][0].detach().cpu().numpy())
+    if composer.shared.verbose:
+        logger.info("Base model named modules:\n%s", base_model_named_modules)
+        logger.info("Base model weight stats:\n%s", base_model_weight_stats)
+        logger.info(
+            "Base model %s\ntotal trainable parameters: %.2fM\ntotal parameters: %.2fM",
+            base_model.__class__.__name__,
+            base_model_total_trainable_params / 1_000_000,
+            base_model_total_params / 1_000_000,
+        )
+
+    # NOTE: dry run of model forward pass
     sample_batch = [tokenized_train_dataset[i] for i in range(2)]
     collated_sample_batch = data_collator(sample_batch)  # 2 samples
-    pprint(collated_sample_batch["input_ids"].shape)
-    pprint(collated_sample_batch["labels"])
-    outputs: ModelOutput = base_model(**collated_sample_batch)
-    pprint(outputs.keys())
-    pprint(outputs["logits"].shape)
-    pprint(outputs["logits"][0][0].detach().cpu().numpy())
+    logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
+    logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
+    logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
+    logger.info("Collated sample batch attention_mask shape: %s", collated_sample_batch["attention_mask"].shape)
+    status = dry_run(model=base_model, batch=collated_sample_batch)
+    if status["status"] != "SUCCESS":
+        logger.error("Dry run failed. Exiting.")
+        raise ValueError("Dry run failed.")
+    outputs: ModelOutput = status["outputs"]
+    logger.info("Dry run status: %s", status["status"])
+    logger.info("Dry run outputs keys: %s", outputs.keys())
+    logger.info("Dry run outputs logits shape: %s", outputs["logits"].shape)
+    logger.info("Dry run outputs logits[0][0]: %s", outputs["logits"][0][0].detach().cpu().numpy())
 
-    # FIXME: not working
-    # if torch.cuda.is_available() and not IS_DEBUG:
-    #     logger.info("Showing model summary.")
-    #     logger.warning(
-    #         "Be careful as `torchinfo` might MUTATE model init weights, so if you run without `torchinfo` your results from model may differ!"
-    #     )
-    #     torchinfo.summary(
-    #         base_model,
-    #         verbose=1,
-    #         input_data=collated_sample_batch,
-    #         dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
-    #         device=base_model.device,
-    #     )
+    # NOTE: show model summary
+    if composer.shared.show_model_summary:
+        logger.info("Showing model summary.")
+        logger.warning(
+            "Be careful as `torchinfo` might MUTATE model init weights, so if you run without `torchinfo` your results from model may differ!"
+        )
+        torchinfo.summary(
+            base_model,
+            verbose=1,
+            input_data=collated_sample_batch["input_ids"],
+            dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
+            device=base_model.device,
+        )
 
     if composer.shared.use_lora:
         logger.info(
@@ -394,7 +410,7 @@ def main(composer: Composer, state: State) -> None:
             base_model_with_adapter.print_trainable_parameters()
         except ValueError as exc:
             logger.exception(msg="Error creating LoraConfig, check `target_modules` and `modules_to_save`.")
-            logger.info("Base model target modules: %s", potential_target_modules)
+            logger.info("Base model potential target modules: %s", base_model_named_modules)
             raise exc from None
 
     # TOOD: DO PROFILE?
@@ -644,7 +660,7 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-@app.local_entrypoint()
+# @app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -666,11 +682,11 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    # main(composer, state)
-    main.remote(composer, state)
+    main(composer, state)
+    # main.remote(composer, state)
 
 
-# entrypoint("lal/conf/deberta_debug.yaml")
+entrypoint("lal/conf/deberta_debug.yaml")
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")

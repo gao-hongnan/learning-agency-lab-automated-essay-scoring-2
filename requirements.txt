@@ -1,4 +1,4 @@
-omniverse==0.0.36
+omniverse==0.0.37
 peft==0.11.1
 transformers==4.41.2
 modal==0.62.201

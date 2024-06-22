@@ -55,6 +55,10 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 
 - [https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently](https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently)
 
+## Loss, Combined Loss, Auxiliary Loss etc
+
+- https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/494873
+
 ## MISC
 
 - https://github.com/huggingface/transformers/blob/b7672826cad31e30319487af876e608d8af7d37b/examples/pytorch/language-modeling/run_clm.py#L264
