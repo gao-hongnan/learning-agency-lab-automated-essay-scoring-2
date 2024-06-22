@@ -112,7 +112,7 @@ class ImmutableProxy:
 
 @app.function(
     image=IMAGE,
-    gpu=H100_80_GPU,
+    gpu=A100_40_GPU,
     timeout=int(Constants.TIMEOUT),
     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},

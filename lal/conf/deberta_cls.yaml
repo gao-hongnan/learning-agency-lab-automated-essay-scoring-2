@@ -24,7 +24,7 @@ shared:
   # split/resample strategy
   resample_strategy: "StratifiedKFold"
   resample_params:
-    n_splits: 15
+    n_splits: 7
     shuffle: true
     random_state: 42
   # resample_strategy: "GroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
@@ -74,7 +74,7 @@ shared:
   pooler_type: null
   pooler_config: {}
 
-  pretrained_model_name_or_path: "microsoft/deberta-v3-base" # CHANGE
+  pretrained_model_name_or_path: "microsoft/deberta-v3-small" # CHANGE
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
   target_artifacts_dir: "/artifacts"
@@ -145,7 +145,7 @@ shared:
   save_steps: null
   save_strategy: "steps"
   save_total_limit: 3
-  warmup_ratio: 0 # CHANGE
+  warmup_ratio: 0.1 # CHANGE
   warmup_steps: 0
   weight_decay: 0.01
 
