@@ -61,7 +61,7 @@ from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import AttentionPooler, DebertaV2WithAttentionPooler
+from .src.models import AttentionPooler, DebertaV2WithAttentionPooler, init_attention_pooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, preprocess, process_labels, merge_topic_info_to_df
 from .src.state import State, Statistics
@@ -169,12 +169,12 @@ def main(composer: Composer, state: State) -> None:
 
     df = process_labels(df, task=composer.shared.task)
 
-    if composer.shared.topics_map_filepath:
-        df = merge_topic_info_to_df(
-            df,
-            train_topic_filepath=composer.shared.train_topic_filepath,
-            topics_map_path=composer.shared.topics_map_filepath,
-        )
+    # if composer.shared.topics_map_filepath:
+    #     df = merge_topic_info_to_df(
+    #         df,
+    #         train_topic_filepath=composer.shared.train_topic_filepath,
+    #         topics_map_path=composer.shared.topics_map_filepath,
+    #     )
 
     if composer.shared.group_by:
         df = add_prompt_name_group(
@@ -307,7 +307,7 @@ def main(composer: Composer, state: State) -> None:
         if composer.shared.pooler_type:
             raise ValueError("Cannot have `default` with `pooler_type`.")
 
-        if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is not None:
+        if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is None:
             raise ValueError("Invalid `criterion` with `default`.")
 
         base_model = load_model(
@@ -324,14 +324,13 @@ def main(composer: Composer, state: State) -> None:
         if composer.shared.criterion == "ordinal-log-loss":
             base_model = DebertaV2OLL(config=base_model_config)
 
-    # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
-    # base_model.pooler = AttentionPooler(
-    #     num_hidden_layers=base_model.config.num_hidden_layers,
-    #     hidden_size=base_model.config.hidden_size,
-    #     pooler_hidden_dim_fc=base_model.config.hidden_size,
-    #     pooler_dropout=base_model.config.pooler_dropout,
-    #     device=base_model.device,
-    # )
+    base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
+    base_model.pooler = AttentionPooler(
+        num_hidden_layers=base_model.config.num_hidden_layers,
+        hidden_size=base_model.config.hidden_size,
+        pooler_hidden_dim_fc=base_model.config.hidden_size,
+        pooler_dropout=base_model.config.pooler_dropout,
+    )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
@@ -808,7 +807,7 @@ lal.entrypoint \
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
 # modal shell learning_agency_lab_automated_essay_scoring_2.chris
 # modal volume ls artifacts-volume
-# modal volume get artifacts-volume f2_output_v20240622131032/valid_df_fold_2.csv .
+# modal volume get artifacts-volume f2_output_v20240622193051/valid_df_fold_2.csv .
 
 """
 array(0.49022794, dtype=float32)

@@ -43,7 +43,7 @@ shared:
   external_data_filepath: "lal/data/persuade_2.0_human_scores_demo_id_github.csv"
   predicted_prompt_filepath: "lal/data/predicted_prompt.csv"
   train_topic_filepath: "lal/data/train_topic.csv"
-  topics_map_filepath: "lal/data/topics_map.json"
+  topics_map_filepath: "lal/conf/topics_map.json"
 
   # from_pretrained configurations
   padding_side: "right"
@@ -85,7 +85,7 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
-  default: false
+  default: true # CHANGE
 
   load_from: null
   inference: false
@@ -122,7 +122,7 @@ shared:
   greater_is_better: true # CHANGE
   include_tokens_per_second: false
   label_smoothing_factor: 0.0
-  learning_rate: 0.00002 # CHANGE
+  learning_rate: 0.00001 # CHANGE
   load_best_model_at_end: true
   logging_dir: null
   logging_first_step: true
@@ -130,15 +130,15 @@ shared:
   logging_strategy: "steps"
   lr_scheduler_kwargs: {}
   lr_scheduler_type: "cosine" # CHANGE
-  max_grad_norm: 1.0
+  max_grad_norm: 10 # CHANGE
   max_steps: null
   metric_for_best_model: "eval_qwk" # CHANGE
   num_train_epochs: 4 # CHANGE
   optim: "adamw_torch"
   output_dir: null
   overwrite_output_dir: true
-  per_device_eval_batch_size: 16 # CHANGE
-  per_device_train_batch_size: 16 # CHANGE
+  per_device_eval_batch_size: 8 # CHANGE
+  per_device_train_batch_size: 8 # CHANGE
   prediction_loss_only: false
   report_to: "wandb"
   restore_callback_states_from_checkpoint: false
@@ -154,6 +154,6 @@ shared:
   weight_decay: 0.01
 
 
-  base_learning_rate: 0.00002 # CHANGE
-  desired_effective_batch_size: 16 # CHANGE
+  base_learning_rate: 0.00001 # CHANGE
+  desired_effective_batch_size: 8 # CHANGE
   enable_mixed_precision: true

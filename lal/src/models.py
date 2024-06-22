@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 def init_attention_pooler(module: nn.Module) -> None:
     if isinstance(module, nn.Linear):
-        # torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)
-        torch.nn.init.xavier_normal_(module.weight)
+        torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)
+        # torch.nn.init.xavier_normal_(module.weight)
         if module.bias is not None:
             module.bias.data.fill_(0.0)
 
@@ -37,7 +37,6 @@ class AttentionPooler(nn.Module):
         hidden_size: int,
         pooler_hidden_dim_fc: int,
         pooler_dropout: float,
-        device: torch.device,
     ):
         """Initialize the AttentionPooler layer. Tested with `Deberta` model
         but not limited to it. You may have to change some config names if you
@@ -72,7 +71,6 @@ class AttentionPooler(nn.Module):
         self.hidden_size = hidden_size
         self.pooler_hidden_dim_fc = pooler_hidden_dim_fc
         self.pooler_dropout = pooler_dropout
-        self.device = device
 
         self.dropout = nn.Dropout(self.pooler_dropout)
 
@@ -205,7 +203,6 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
             hidden_size=config.hidden_size,
             pooler_hidden_dim_fc=config.hidden_size,
             pooler_dropout=config.pooler_dropout,
-            device=self.device,
         )
 
         output_dim = self.pooler.output_dim

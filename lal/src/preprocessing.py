@@ -189,8 +189,8 @@ def create_dataset(
     ds = ds.remove_columns(existing_columns)
     logger.info("Tokenized dataset columns: %s", ds.column_names)
 
-    # for row in ds.take(1):
-    #     logger.debug("Dataset sample: %s", row)
+    for row in ds.take(1):
+        logger.debug("Dataset sample: %s", row)
 
     from rich.pretty import pprint
 
