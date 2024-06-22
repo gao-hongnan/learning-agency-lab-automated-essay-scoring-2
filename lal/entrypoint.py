@@ -103,14 +103,14 @@ class ImmutableProxy:
         ) from None
 
 
-@app.function(
-    image=IMAGE,
-    gpu=H100_80_GPU,
-    timeout=int(Constants.TIMEOUT),
-    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-)
+# @app.function(
+#     image=IMAGE,
+#     gpu=H100_80_GPU,
+#     timeout=int(Constants.TIMEOUT),
+#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+# )
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -303,6 +303,8 @@ def main(composer: Composer, state: State) -> None:
             pooler_dropout=base_model.config.pooler_dropout,
         )
 
+    pprint(base_model.pooler.state_dict().keys())
+
     # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
     # base_model.pooler = AttentionPooler(
     #     num_hidden_layers=base_model.config.num_hidden_layers,
@@ -318,7 +320,7 @@ def main(composer: Composer, state: State) -> None:
 
     pprint(base_model)
     base_model_named_modules = get_named_modules(base_model)
-    # pprint(base_model_named_modules)
+    pprint(base_model_named_modules)
     base_model_last_module_name = list(base_model_named_modules[-1].keys())[0]
     if "dropout" in base_model_last_module_name:
         base_model_last_module_name = list(base_model_named_modules[-2].keys())[0]
@@ -643,7 +645,7 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-@app.local_entrypoint()
+# @app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -665,11 +667,11 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    # main(composer, state)
-    main.remote(composer, state)
+    main(composer, state)
+    # main.remote(composer, state)
 
 
-# entrypoint("lal/conf/deberta_debug.yaml")
+entrypoint("lal/conf/deberta_debug.yaml")
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")
@@ -758,6 +760,8 @@ export ALLOW_WANDB=true && \
 modal run --detach \
 lal.entrypoint \
 --yaml-path=lal/conf/deberta_reg.yaml
+
+python -m lal.entrypoint --yaml-path=lal/conf/deberta_reg.yaml
 
 export ALLOW_WANDB=true && \
 modal run --detach \
