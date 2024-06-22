@@ -26,10 +26,10 @@ class Statistics(BaseModel):
 
 
 class State(BaseModel):
-    # git_commit_hash: str = Field(
-    #     default_factory=lambda: get_git_commit_hash(working_dir=".", are_there_untracked_or_uncommitted=False)
-    # )
-    git_commit_hash: str = "111"
+    git_commit_hash: str = Field(
+        default_factory=lambda: get_git_commit_hash(working_dir=".", are_there_untracked_or_uncommitted=False)
+    )
+    # git_commit_hash: str = "111"
     timestamp: str = Field(default_factory=lambda: str(datetime.now().strftime("%Y%m%d%H%M%S")))
 
     base_model_config: Any = None  # this is the model config from hf
