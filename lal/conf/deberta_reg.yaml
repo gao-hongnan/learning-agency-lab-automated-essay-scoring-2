@@ -122,7 +122,7 @@ shared:
   max_grad_norm: 1.0
   max_steps: null
   metric_for_best_model: "eval_qwk" # CHANGE
-  num_train_epochs: 4 # CHANGE
+  num_train_epochs: 5 # CHANGE
   optim: "adamw_torch"
   output_dir: null
   overwrite_output_dir: true

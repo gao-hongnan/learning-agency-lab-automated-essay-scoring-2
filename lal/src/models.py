@@ -33,7 +33,8 @@ class AttentionPooler(nn.Module):
         num_hidden_layers: int,
         hidden_size: int,
         pooler_hidden_dim_fc: int,
-        pooler_dropout: float = 0.0,
+        pooler_dropout: float,
+        device: torch.device,
     ):
         """Initialize the AttentionPooler layer. Tested with `Deberta` model
         but not limited to it. You may have to change some config names if you
@@ -68,20 +69,28 @@ class AttentionPooler(nn.Module):
         self.hidden_size = hidden_size
         self.pooler_hidden_dim_fc = pooler_hidden_dim_fc
         self.pooler_dropout = pooler_dropout
+        self.device = device
 
         self.dropout = nn.Dropout(self.pooler_dropout)
 
-        q_transform = np.random.normal(
-            loc=0.0, scale=0.1, size=(1, self.hidden_size)
-        )  # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
-        #        self.q = nn.Parameter(q_transform).float()
-        self.q = nn.Parameter(torch.from_numpy(q_transform)).float()
+        # q_transform = np.random.normal(
+        #     loc=0.0, scale=0.1, size=(1, self.hidden_size)
+        # )  # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
+        # # self.q = nn.Parameter(q_transform).float()
+        # self.q = nn.Parameter(torch.from_numpy(q_transform)).float()
 
-        w_h_transform = np.random.normal(
-            loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc)
-        )  # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
-        # self.w_h = nn.Parameter(w_h_transform).float()
-        self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
+        # w_h_transform = np.random.normal(
+        #     loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc)
+        # )  # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
+        # # self.w_h = nn.Parameter(w_h_transform).float()
+        # self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
+
+        self.q = nn.Linear(self.hidden_size, 1, bias=False) # weight.shape: (1, hidden_size)
+        self.w_h = nn.Linear(self.hidden_size, self.pooler_hidden_dim_fc, bias=False) # weight.shape: (pooler_hidden_dim_fc, hidden_size) input dim: hidden_size, output dim: pooler_hidden_dim_fc
+
+        # nn.init.normal_(self.q_transform.weight, mean=0.0, std=0.1)
+        # nn.init.normal_(self.w_h_transform.weight, mean=0.0, std=0.1)
+
 
     def forward(self, all_hidden_states: Tuple[torch.Tensor]) -> torch.Tensor:
         """Use deberta example:
@@ -99,8 +108,8 @@ class AttentionPooler(nn.Module):
              `(batch_size, sequence_length, hidden_size)`): Sequence of hidden-states at the output of the last layer of the model.
         3. So we know this shape is `(batch_size, sequence_length, hidden_size)`.
         """
-        self.q = self.q.to(all_hidden_states[0].device)
-        self.w_h = self.w_h.to(all_hidden_states[0].device)
+        #self.q = self.q.to(all_hidden_states[0].device)
+        #self.w_h = self.w_h.to(all_hidden_states[0].device)
 
         # convert tuple of tensors to tensors
         all_hidden_states = torch.stack(all_hidden_states)  # type: ignore[assignment]
@@ -119,11 +128,44 @@ class AttentionPooler(nn.Module):
         return out
 
     def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        v = torch.matmul(self.q, hidden_states.transpose(-2, -1)).squeeze(1)
-        v = F.softmax(v, -1)
+        weights_q = self.q.weight # [1, hidden_size]
+        v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
+        v = F.softmax(v, dim=-1)
+
+        weights_w_h = self.w_h.weight # shape: (pooler_hidden_dim_fc, hidden_size)
+
         v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
-        v = torch.matmul(self.w_h.transpose(1, 0), v_temp).squeeze(2)
+        v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
+
+
+    # def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    #     # weights_q = self.q.weight # [1, hidden_size]
+    #     # v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
+    #     print("q shape", self.q.shape) # shape: (1, hidden_size)
+    #     print("Initial hidden_states shape:", hidden_states.shape) # shape: (batch_size, num_hidden_layers, hidden_size)
+    #     # Print the shape after transposing
+    #     print("hidden_states transposed shape:", hidden_states.transpose(-2, -1).shape) # shape: (batch_size, hidden_size, num_hidden_layers)
+
+    #     v = torch.matmul(self.q, hidden_states.transpose(-2, -1)).squeeze(1)
+
+    #     print("Shape after applying q and squeezing:", v.shape) # shape: (batch_size, num_hidden_layers)
+    #     v = F.softmax(v, dim=-1)
+    #     print("Shape after softmax:", v.shape) # shape: (batch_size, num_hidden_layers)
+
+    #     # weights_w_h = self.w_h.weight # shape: (hidden_size, pooler_hidden_dim_fc)
+    #     print("Shape of v.unsqueeze(1):", v.unsqueeze(1).shape) # shape: (batch_size, 1, num_hidden_layers)
+    #     print("Shape of hidden_states for context vector computation:", hidden_states.shape) # shape: (batch_size, num_hidden_layers, hidden_size)
+    #     print("Resulting shape after matmul of v.unsqueeze(1) and hidden_states:", torch.matmul(v.unsqueeze(1), hidden_states).shape) # shape: (batch_size, 1, hidden_size)
+
+    #     v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
+    #     print("Shape after transposing v_temp:", v_temp.shape) # shape: (batch_size, hidden_size, 1)
+    #     print("Shape of w_h:", self.w_h.shape) # shape: (hidden_size, pooler_hidden_dim_fc)
+    #     print("Shape of w_h transposed:", self.w_h.transpose(1, 0).shape) # shape: (pooler_hidden_dim_fc, hidden_size)
+    #     print("Shape of matmul of w_h and v_temp:", torch.matmul(self.w_h.transpose(1, 0), v_temp).shape) # shape: (batch_size, pooler_hidden_dim_fc, 1)
+    #     v = torch.matmul(self.w_h.transpose(1, 0), v_temp).squeeze(2)
+    #     print("Final output shape after applying w_h:", v.shape)  # shape: (batch_size, pooler_hidden_dim_fc)
+    #     return v
 
     @property
     def output_dim(self) -> int:
@@ -163,6 +205,7 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
             hidden_size=config.hidden_size,
             pooler_hidden_dim_fc=config.hidden_size,
             pooler_dropout=config.pooler_dropout,
+            device=self.device,
         )
 
         output_dim = self.pooler.output_dim
