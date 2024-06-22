@@ -145,7 +145,7 @@ shared:
   save_steps: null
   save_strategy: "steps"
   save_total_limit: 3
-  warmup_ratio: 0.1 # CHANGE
+  warmup_ratio: 0 # CHANGE
   warmup_steps: 0
   weight_decay: 0.01
 
