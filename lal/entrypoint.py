@@ -365,21 +365,22 @@ def main(composer: Composer, state: State) -> None:
         )
 
     # NOTE: dry run of model forward pass
-    sample_batch = [tokenized_train_dataset[i] for i in range(2)]
-    collated_sample_batch = data_collator(sample_batch)  # 2 samples
-    logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
-    logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
-    logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
-    logger.info("Collated sample batch attention_mask shape: %s", collated_sample_batch["attention_mask"].shape)
-    status = dry_run(model=base_model, batch=collated_sample_batch)
-    if status["status"] != "SUCCESS":
-        logger.error("Dry run failed. Exiting.")
-        raise ValueError("Dry run failed.")
-    outputs: ModelOutput = status["outputs"]
-    logger.info("Dry run status: %s", status["status"])
-    logger.info("Dry run outputs keys: %s", outputs.keys())
-    logger.info("Dry run outputs logits shape: %s", outputs["logits"].shape)
-    logger.info("Dry run outputs logits[0][0]: %s", outputs["logits"][0][0].detach().cpu().numpy())
+    if composer.shared.dry_run:
+        sample_batch = [tokenized_train_dataset[i] for i in range(2)]
+        collated_sample_batch = data_collator(sample_batch)  # 2 samples
+        logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
+        logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
+        logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
+        logger.info("Collated sample batch attention_mask shape: %s", collated_sample_batch["attention_mask"].shape)
+        status = dry_run(model=base_model, batch=collated_sample_batch)
+        if status["status"] != "SUCCESS":
+            logger.error("Dry run failed. Exiting.")
+            raise ValueError("Dry run failed.")
+        outputs: ModelOutput = status["outputs"]
+        logger.info("Dry run status: %s", status["status"])
+        logger.info("Dry run outputs keys: %s", outputs.keys())
+        logger.info("Dry run outputs logits shape: %s", outputs["logits"].shape)
+        logger.info("Dry run outputs logits[0][0]: %s", outputs["logits"][0][0].detach().cpu().numpy())
 
     # NOTE: show model summary
     if composer.shared.show_model_summary:

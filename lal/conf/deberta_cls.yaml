@@ -80,7 +80,7 @@ shared:
   target_artifacts_dir: "/artifacts"
   verbose: true
   show_model_summary: true
-  dry_run: true
+  dry_run: false
   default: false
 
   load_from: null
