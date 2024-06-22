@@ -103,14 +103,14 @@ class ImmutableProxy:
         ) from None
 
 
-# @app.function(
-#     image=IMAGE,
-#     gpu=H100_80_GPU,
-#     timeout=int(Constants.TIMEOUT),
-#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-# )
+@app.function(
+    image=IMAGE,
+    gpu=H100_80_GPU,
+    timeout=int(Constants.TIMEOUT),
+    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+)
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -124,7 +124,9 @@ def main(composer: Composer, state: State) -> None:
     # NOTE: update composer - mutating
     if composer.shared.name is None:
         composer.shared.name = (
-            composer.shared.job_type
+            str(composer.shared.fold)
+            + "-"
+            + composer.shared.job_type
             + "-"
             + composer.shared.task
             + "-"
@@ -431,7 +433,9 @@ def main(composer: Composer, state: State) -> None:
         Path(composer.shared.target_artifacts_dir) / f"f{composer.shared.fold}_output_v{state.timestamp}"
     )
     composer.shared.logging_dir = composer.shared.logging_dir or str(
-        Path(composer.shared.target_artifacts_dir) / composer.shared.name / f"f{composer.shared.fold}_logs_v{state.timestamp}"
+        Path(composer.shared.target_artifacts_dir)
+        / composer.shared.name
+        / f"f{composer.shared.fold}_logs_v{state.timestamp}"
     )
 
     if composer.shared.enable_mixed_precision:
@@ -640,7 +644,7 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-# @app.local_entrypoint()
+@app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -662,11 +666,11 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    main(composer, state)
-    # main.remote(composer, state)
+    # main(composer, state)
+    main.remote(composer, state)
 
 
-entrypoint("lal/conf/deberta_debug.yaml")
+# entrypoint("lal/conf/deberta_debug.yaml")
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")
@@ -766,7 +770,7 @@ learning_agency_lab_automated_essay_scoring_2.entrypoint \
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
 # modal shell learning_agency_lab_automated_essay_scoring_2.chris
 # modal volume ls artifacts-volume
-# modal volume get artifacts-volume output_v20240622093258 .
+# modal volume get artifacts-volume f2_output_v20240622131032/valid_df_fold_2.csv .
 
 """
 array(0.49022794, dtype=float32)

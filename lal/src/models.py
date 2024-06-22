@@ -85,12 +85,13 @@ class AttentionPooler(nn.Module):
         # # self.w_h = nn.Parameter(w_h_transform).float()
         # self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
 
-        self.q = nn.Linear(self.hidden_size, 1, bias=False) # weight.shape: (1, hidden_size)
-        self.w_h = nn.Linear(self.hidden_size, self.pooler_hidden_dim_fc, bias=False) # weight.shape: (pooler_hidden_dim_fc, hidden_size) input dim: hidden_size, output dim: pooler_hidden_dim_fc
+        self.q = nn.Linear(self.hidden_size, 1, bias=False)  # weight.shape: (1, hidden_size)
+        self.w_h = nn.Linear(
+            self.hidden_size, self.pooler_hidden_dim_fc, bias=False
+        )  # weight.shape: (pooler_hidden_dim_fc, hidden_size) input dim: hidden_size, output dim: pooler_hidden_dim_fc
 
         # nn.init.normal_(self.q_transform.weight, mean=0.0, std=0.1)
         # nn.init.normal_(self.w_h_transform.weight, mean=0.0, std=0.1)
-
 
     def forward(self, all_hidden_states: Tuple[torch.Tensor]) -> torch.Tensor:
         """Use deberta example:
@@ -108,8 +109,8 @@ class AttentionPooler(nn.Module):
              `(batch_size, sequence_length, hidden_size)`): Sequence of hidden-states at the output of the last layer of the model.
         3. So we know this shape is `(batch_size, sequence_length, hidden_size)`.
         """
-        #self.q = self.q.to(all_hidden_states[0].device)
-        #self.w_h = self.w_h.to(all_hidden_states[0].device)
+        # self.q = self.q.to(all_hidden_states[0].device)
+        # self.w_h = self.w_h.to(all_hidden_states[0].device)
 
         # convert tuple of tensors to tensors
         all_hidden_states = torch.stack(all_hidden_states)  # type: ignore[assignment]
@@ -128,16 +129,15 @@ class AttentionPooler(nn.Module):
         return out
 
     def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        weights_q = self.q.weight # [1, hidden_size]
+        weights_q = self.q.weight  # [1, hidden_size]
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
         v = F.softmax(v, dim=-1)
 
-        weights_w_h = self.w_h.weight # shape: (pooler_hidden_dim_fc, hidden_size)
+        weights_w_h = self.w_h.weight  # shape: (pooler_hidden_dim_fc, hidden_size)
 
         v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
         v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
-
 
     # def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
     #     # weights_q = self.q.weight # [1, hidden_size]

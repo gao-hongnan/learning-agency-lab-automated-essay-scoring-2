@@ -7,7 +7,8 @@ wandb
 artifacts
 .vscode
 .DS_Store
-output*
+*output*
+tmp**.*
 
 # C extensions
 *.so
