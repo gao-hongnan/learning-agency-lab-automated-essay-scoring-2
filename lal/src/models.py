@@ -177,7 +177,6 @@ class DebertaV2WithAttentionPooler(DebertaV2PreTrainedModel):
 
         print(config)
 
-
     def get_input_embeddings(self):
         return self.deberta.get_input_embeddings()
 

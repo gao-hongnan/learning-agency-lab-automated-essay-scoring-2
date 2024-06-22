@@ -10,7 +10,6 @@ from typing import Any
 import pandas as pd
 import torch
 import torch.distributed
-import wandb
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
@@ -35,6 +34,8 @@ from transformers.modeling_outputs import ModelOutput
 from wandb.sdk.lib import RunDisabled
 from wandb.sdk.wandb_run import Run
 
+import wandb
+
 from .conf.config import (
     A10_24_GPU,
     A100_40_GPU,
@@ -48,7 +49,7 @@ from .conf.config import (
     Shared,
     app,
 )
-from .src.callbacks import SaveLoraHeadCallback
+from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
@@ -102,14 +103,14 @@ class ImmutableProxy:
         ) from None
 
 
-# @app.function(
-#     image=IMAGE,
-#     gpu=H100_80_GPU,
-#     timeout=int(Constants.TIMEOUT),
-#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-# )
+@app.function(
+    image=IMAGE,
+    gpu=H100_80_GPU,
+    timeout=int(Constants.TIMEOUT),
+    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+)
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -516,6 +517,7 @@ def main(composer: Composer, state: State) -> None:
         compute_metrics = None
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
+    pprint(model)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -532,6 +534,10 @@ def main(composer: Composer, state: State) -> None:
             and composer.shared.task in ["CLASSIFICATION", "REGRESSION"]
         ):
             trainer.add_callback(SaveLoraHeadCallback(model))
+
+        if composer.shared.pooler_type:
+            trainer.add_callback(SaveModelWithPooler(model))
+
         if composer.shared.resume_from_checkpoint:
             logger.warning(
                 "Resuming training from checkpoint. Ensure your `num_train_epochs` is greater than your resumed checkpoint's `num_train_epochs`."
@@ -542,6 +548,7 @@ def main(composer: Composer, state: State) -> None:
         trainer.save_state()
         tokenizer.save_pretrained(composer.shared.output_dir)
         model.save_pretrained(composer.shared.output_dir)
+        pprint(model.state_dict().keys())
         # if hasattr(trainer.model, "base_model"):
         #     logger.info("Saving base model.")
         #     pprint(trainer.model.base_model.model)
@@ -636,7 +643,7 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-# @app.local_entrypoint()
+@app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -658,10 +665,11 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    main(composer, state)
-    # main.remote(composer, state)
+    # main(composer, state)
+    main.remote(composer, state)
 
-entrypoint("lal/conf/deberta_debug.yaml")
+
+# entrypoint("lal/conf/deberta_debug.yaml")
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")

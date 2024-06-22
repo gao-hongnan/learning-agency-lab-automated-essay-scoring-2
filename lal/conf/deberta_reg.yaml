@@ -67,11 +67,11 @@ shared:
   device_map: "auto"
   torch_dtype: "float32"
   load_in_4bit: false
-  output_hidden_states: true
+  output_hidden_states: false
   output_attentions: false
 
   # pooler
-  pooler_type: attention # CHANGE
+  pooler_type: null # CHANGE
   pooler_config: {}
 
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"

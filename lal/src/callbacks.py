@@ -23,3 +23,20 @@ class SaveLoraHeadCallback(TrainerCallback):
         fname = f"{args.output_dir}/checkpoint-{state.global_step}/score.original_module.pt"
         # torch.save(model.model.score.original_module.state_dict(), fname)
         torch.save(kwargs["model"].score.original_module.state_dict(), fname)
+
+
+class SaveModelWithPooler(TrainerCallback):
+    def __init__(self, model) -> None:
+        super().__init__()
+        self.model = model
+
+    def on_save(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
+        fname = f"{args.output_dir}/checkpoint-{state.global_step}/base_model_with_pooler.pt"
+        # torch.save(model.model.score.original_module.state_dict(), fname)
+        torch.save(kwargs["model"].state_dict(), fname)
