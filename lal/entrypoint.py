@@ -296,12 +296,6 @@ def main(composer: Composer, state: State) -> None:
         )
     elif composer.shared.pooler_type == "attention":
         base_model = DebertaV2WithAttentionPooler(config=base_model_config)
-        base_model.pooler = AttentionPooler(
-            num_hidden_layers=base_model.config.num_hidden_layers,
-            hidden_size=base_model.config.hidden_size,
-            pooler_hidden_dim_fc=base_model.config.hidden_size,
-            pooler_dropout=base_model.config.pooler_dropout,
-        )
 
     pprint(base_model.pooler.state_dict().keys())
 
@@ -311,6 +305,7 @@ def main(composer: Composer, state: State) -> None:
     #     hidden_size=base_model.config.hidden_size,
     #     pooler_hidden_dim_fc=base_model.config.hidden_size,
     #     pooler_dropout=base_model.config.pooler_dropout,
+    #     device=base_model.device,
     # )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
@@ -320,7 +315,7 @@ def main(composer: Composer, state: State) -> None:
 
     pprint(base_model)
     base_model_named_modules = get_named_modules(base_model)
-    pprint(base_model_named_modules)
+    # pprint(base_model_named_modules)
     base_model_last_module_name = list(base_model_named_modules[-1].keys())[0]
     if "dropout" in base_model_last_module_name:
         base_model_last_module_name = list(base_model_named_modules[-2].keys())[0]
@@ -761,7 +756,7 @@ modal run --detach \
 lal.entrypoint \
 --yaml-path=lal/conf/deberta_reg.yaml
 
-python -m lal.entrypoint --yaml-path=lal/conf/deberta_reg.yaml
+python -m lal.entrypoint --yaml-path=lal/conf/deberta_debug.yaml
 
 export ALLOW_WANDB=true && \
 modal run --detach \
