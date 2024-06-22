@@ -110,14 +110,14 @@ class ImmutableProxy:
         ) from None
 
 
-@app.function(
-    image=IMAGE,
-    gpu=H100_80_GPU,
-    timeout=int(Constants.TIMEOUT),
-    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-)
+# @app.function(
+#     image=IMAGE,
+#     gpu=H100_80_GPU,
+#     timeout=int(Constants.TIMEOUT),
+#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+# )
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -368,6 +368,7 @@ def main(composer: Composer, state: State) -> None:
     sample_batch = [tokenized_train_dataset[i] for i in range(2)]
     collated_sample_batch = data_collator(sample_batch)  # 2 samples
     if composer.shared.dry_run:
+        pprint(collated_sample_batch["labels"])
         logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
         logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
         logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
@@ -672,7 +673,7 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-@app.local_entrypoint()
+# @app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
@@ -694,11 +695,12 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    # main(composer, state)
-    main.remote(composer, state)
+    main(composer, state)
+    # main.remote(composer, state)
 
 
 # entrypoint("lal/conf/deberta_debug.yaml")
+entrypoint("lal/conf/deberta_cls.yaml")
 
 # if not IN_MODAL:
 #     entrypoint("lal/conf/deberta_reg.yaml")
@@ -788,7 +790,7 @@ modal run --detach \
 lal.entrypoint \
 --yaml-path=lal/conf/deberta_reg.yaml
 
-python -m lal.entrypoint --yaml-path=lal/conf/deberta_debug.yaml
+python -m lal.entrypoint
 
 export ALLOW_WANDB=true && \
 modal run --detach \

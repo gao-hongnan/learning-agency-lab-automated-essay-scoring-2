@@ -3,7 +3,7 @@ shared:
 
   # project configurations for experiment tracking - wandb
   project: "learning-agency-lab-automated-essay-scoring-2"
-  entity: "hongnangao"
+  entity: "gaohn-teaching-mlops"
   name: null
   job_type: "train" # CHANGE
   tags: null
@@ -80,7 +80,7 @@ shared:
   target_artifacts_dir: "/artifacts"
   verbose: true
   show_model_summary: true
-  dry_run: false
+  dry_run: true
   default: false
 
   load_from: null

@@ -121,7 +121,7 @@ def preprocess(
             add_special_tokens=add_special_tokens,
             **kwargs,
         )
-        tokenized_sample["labels"] = [sample["label"]]  # TODO: why need []?
+        tokenized_sample["labels"] = sample["label"]  # TODO: why need []?
         return tokenized_sample
     else:
         raise ValueError(f"Unsupported task type: {task}")
