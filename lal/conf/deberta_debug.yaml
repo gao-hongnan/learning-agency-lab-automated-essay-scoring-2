@@ -75,7 +75,7 @@ shared:
   output_attentions: false
 
   # pooler
-  pooler_type: attention # CHANGE
+  pooler_type: null # CHANGE
   pooler_config: {}
 
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"
