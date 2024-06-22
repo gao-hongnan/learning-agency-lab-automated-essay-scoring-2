@@ -365,9 +365,9 @@ def main(composer: Composer, state: State) -> None:
         )
 
     # NOTE: dry run of model forward pass
+    sample_batch = [tokenized_train_dataset[i] for i in range(2)]
+    collated_sample_batch = data_collator(sample_batch)  # 2 samples
     if composer.shared.dry_run:
-        sample_batch = [tokenized_train_dataset[i] for i in range(2)]
-        collated_sample_batch = data_collator(sample_batch)  # 2 samples
         logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
         logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
         logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
