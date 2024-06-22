@@ -218,6 +218,7 @@ class Shared(BaseModel):
     verbose: bool = False
     show_model_summary: bool = False
     dry_run: bool = False
+    default: bool = True # default model from hf, no custom model
 
     load_from: str | None = None
 
@@ -238,6 +239,9 @@ class Shared(BaseModel):
     seed: int = 42
     seed_torch: bool = True
     set_torch_deterministic: bool = False
+
+    # criterion
+    criterion: str = "ordinal-log-loss" # ordinal-log-loss, cross-entropy, mse
 
     # training args -> take from training arg in hf or custom
     ## below is inside training args

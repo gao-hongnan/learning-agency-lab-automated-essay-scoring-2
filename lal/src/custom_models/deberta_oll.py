@@ -1,7 +1,8 @@
-from transformers.models.deberta_v2.modeling_deberta_v2 import *
-from torch import nn
 import numpy as np
 import torch.nn.functional as F
+from torch import nn
+from transformers.models.deberta_v2.modeling_deberta_v2 import *
+
 
 class DebertaV2OLL(DebertaV2PreTrainedModel):
     def __init__(self, config):
@@ -22,7 +23,6 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
         drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
         self.dropout = StableDropout(drop_out)
 
-
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -33,8 +33,7 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
         self.dist_matrix = nn.Parameter(matrix, requires_grad=False)
 
         # self.dist_matrix.requires_grad = False
-        
-        
+
     def _compute_oll_loss(self):
         pass
 
@@ -81,7 +80,7 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
         logits = self.classifier(pooled_output)
 
         loss = None
-        
+
         if labels is not None:
             num_classes = self.num_labels
             dist_matrix = self.dist_matrix
@@ -92,11 +91,9 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
             distances = dist_matrix[true_labels, label_ids].float()
             distances_tensor = distances.clone().requires_grad_(True).to(probas.device)
 
-            err = - torch.log(1 - probas) * distances_tensor ** (self.beta)
+            err = -torch.log(1 - probas) * distances_tensor ** (self.beta)
             loss = torch.sum(err, axis=1).mean()
-            
-    
-            
+
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output

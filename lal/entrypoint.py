@@ -6,11 +6,11 @@ import logging
 import types
 from pathlib import Path
 from typing import Any
-import torchinfo
 
 import pandas as pd
 import torch
 import torch.distributed
+import torchinfo
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
@@ -56,6 +56,7 @@ from .conf.config import (
     app,
 )
 from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
+from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
@@ -294,7 +295,13 @@ def main(composer: Composer, state: State) -> None:
     # So you can think of `AutoModel` to be a "backbone" without the head.
     # see https://discuss.huggingface.co/t/difference-between-automodel-and-automodelforlm/5967
 
-    if composer.shared.pooler_type is None:
+    if composer.shared.default:
+        if not composer.shared.pooler_type:
+            raise ValueError("Cannot have `default` without `pooler_type`.")
+
+        if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is not None:
+            raise ValueError("Invalid `criterion` with `default`.")
+
         base_model = load_model(
             pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
             load_backbone_only=composer.shared.load_backbone_only,
@@ -302,8 +309,12 @@ def main(composer: Composer, state: State) -> None:
             cache_dir=composer.shared.cache_dir,
             config=base_model_config,
         )
-    elif composer.shared.pooler_type == "attention":
-        base_model = DebertaV2WithAttentionPooler(config=base_model_config)
+    else:
+        if composer.shared.pooler_type == "attention":
+            base_model = DebertaV2WithAttentionPooler(config=base_model_config)
+
+        if composer.shared.criterion == "ordinal-log-loss":
+            base_model = DebertaV2OLL(config=base_model_config)
 
     # base_model.forward = types.MethodType(deberta_v2_seq_cls_forward, base_model)
     # base_model.pooler = AttentionPooler(
@@ -780,8 +791,8 @@ python -m lal.entrypoint --yaml-path=lal/conf/deberta_debug.yaml
 
 export ALLOW_WANDB=true && \
 modal run --detach \
-learning_agency_lab_automated_essay_scoring_2.entrypoint \
---yaml-path=./learning_agency_lab_automated_essay_scoring_2/deberta_cls.yaml
+lal.entrypoint \
+--yaml-path=lal/conf/deberta_cls.yaml
 """
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
 # modal shell learning_agency_lab_automated_essay_scoring_2.chris

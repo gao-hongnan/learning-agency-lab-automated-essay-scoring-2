@@ -27,6 +27,11 @@ shared:
     n_splits: 15
     shuffle: true
     random_state: 42
+  # resample_strategy: "GroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
+  # resample_params:
+  #   n_splits: 7 # CHANGE
+  #   # shuffle: true
+  #   # random_state: 42
   group_by: null
   stratify_by: "score"
   fold_column: "fold"
@@ -43,8 +48,8 @@ shared:
   max_length: 1024 # CHANGE
   truncation: true
   return_tensors: null
-  add_special_tokens: false
-  padding: "longest"
+  add_special_tokens: true
+  padding: "max_length"
 
   return_tokenized_text: true
 
@@ -66,7 +71,7 @@ shared:
   output_attentions: false
 
   # pooler
-  pooler_type: "attention"
+  pooler_type: null
   pooler_config: {}
 
   pretrained_model_name_or_path: "microsoft/deberta-v3-base" # CHANGE
@@ -76,6 +81,7 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
+  custom: true
 
   load_from: null
   inference: false
@@ -90,9 +96,12 @@ shared:
   seed_torch: true
   set_torch_deterministic: false
 
+  # criterion
+  criterion: "ordinal-log-loss" # CHANGE
+
   adam_beta1: 0.9
   adam_beta2: 0.999
-  adam_epsilon: 1e-8
+  adam_epsilon: 1e-6
   bf16: false
   data_seed: null
   dataloader_num_workers: 0
@@ -116,16 +125,16 @@ shared:
   logging_steps: null
   logging_strategy: "steps"
   lr_scheduler_kwargs: {}
-  lr_scheduler_type: "linear" # CHANGE
+  lr_scheduler_type: "cosine" # CHANGE
   max_grad_norm: 1.0
   max_steps: null
   metric_for_best_model: "eval_qwk" # CHANGE
-  num_train_epochs: 5 # CHANGE
+  num_train_epochs: 4 # CHANGE
   optim: "adamw_torch"
   output_dir: null
   overwrite_output_dir: true
-  per_device_eval_batch_size: 8 # CHANGE
-  per_device_train_batch_size: 4 # CHANGE
+  per_device_eval_batch_size: 16 # CHANGE
+  per_device_train_batch_size: 16 # CHANGE
   prediction_loss_only: false
   report_to: "wandb"
   restore_callback_states_from_checkpoint: false
@@ -141,6 +150,6 @@ shared:
   weight_decay: 0.01
 
 
-  base_learning_rate: 1e-5
+  base_learning_rate: 0.00002 # CHANGE
   desired_effective_batch_size: 16
   enable_mixed_precision: true

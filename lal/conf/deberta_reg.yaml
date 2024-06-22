@@ -19,7 +19,7 @@ shared:
   full_text: "full_text"
   score: "score"
   label: "label"
-  num_labels: 1
+  num_labels: 1 # CHANGE
 
   # split/resample strategy
   resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
@@ -81,6 +81,7 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
+  custom: true
 
   load_from: null
   inference: false
@@ -94,6 +95,9 @@ shared:
   seed: 42
   seed_torch: true
   set_torch_deterministic: false
+
+  # criterion
+  criterion: "mse"
 
   adam_beta1: 0.9
   adam_beta2: 0.999

@@ -1,7 +1,8 @@
-from transformers.models.deberta_v2.modeling_deberta_v2 import *
-from torch import nn
 import numpy as np
 import torch.nn.functional as F
+from torch import nn
+from transformers.models.deberta_v2.modeling_deberta_v2 import *
+
 
 class AttentionPooler(nn.Module):
     def __init__(self, config, hiddendim_fc):
@@ -24,42 +25,38 @@ class AttentionPooler(nn.Module):
 
         v_temp = torch.matmul(v.unsqueeze(1), h).transpose(-2, -1)
         v = torch.matmul(self.w_h.weight, v_temp).squeeze(2)
-        
+
         return v
 
     def forward(self, all_hidden_states):
-        hidden_states = torch.stack([all_hidden_states[layer_i][:, 0].squeeze()
-                                     for layer_i in range(1, self.num_hidden_layers+1)], dim=-1)
+        hidden_states = torch.stack(
+            [all_hidden_states[layer_i][:, 0].squeeze() for layer_i in range(1, self.num_hidden_layers + 1)], dim=-1
+        )
         hidden_states = hidden_states.view(-1, self.num_hidden_layers, self.hidden_size)
-        
+
         out = self.attention(hidden_states)
         out = self.dropout(out)
 
         return out
 
-        
+
 class DebertaWithAttentionPooling(DebertaV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-
 
         self.deberta = DebertaV2Model(config)
         self.pooler = AttentionPooler(config, hiddendim_fc=self.config.hidden_size)
 
         num_labels = getattr(config, "num_labels", 2)
         self.num_labels = num_labels
-        
-        self.classifier = nn.Linear(self.config.hidden_size, self.config.num_labels)
-        
-        
 
-        
+        self.classifier = nn.Linear(self.config.hidden_size, self.config.num_labels)
+
         # drop_out = getattr(config, "cls_dropout", None)
         # drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
         # self.dropout = StableDropout(drop_out)
 
         self.post_init()
-
 
     def forward(
         self,
@@ -73,7 +70,6 @@ class DebertaWithAttentionPooling(DebertaV2PreTrainedModel):
         output_hidden_states: Optional[bool] = True,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.deberta(
