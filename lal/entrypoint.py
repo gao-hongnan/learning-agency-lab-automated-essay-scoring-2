@@ -433,10 +433,10 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.save_steps = composer.shared.save_steps or composer.shared.eval_steps
 
     composer.shared.output_dir = composer.shared.output_dir or str(
-        Path(composer.shared.target_artifacts_dir) / f"output_v{state.timestamp}"
+        Path(composer.shared.target_artifacts_dir) / f"f{composer.shared.fold}_output_v{state.timestamp}"
     )
     composer.shared.logging_dir = composer.shared.logging_dir or str(
-        Path(composer.shared.target_artifacts_dir) / composer.shared.name / f"logs_v{state.timestamp}"
+        Path(composer.shared.target_artifacts_dir) / composer.shared.name / f"f{composer.shared.fold}_logs_v{state.timestamp}"
     )
 
     if composer.shared.enable_mixed_precision:
@@ -771,7 +771,7 @@ learning_agency_lab_automated_essay_scoring_2.entrypoint \
 # export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
 # modal shell learning_agency_lab_automated_essay_scoring_2.chris
 # modal volume ls artifacts-volume
-# modal volume get artifacts-volume output_v20240616054048/checkpoint-4050 .
+# modal volume get artifacts-volume output_v20240622093258 .
 
 """
 array(0.49022794, dtype=float32)
