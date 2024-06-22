@@ -81,7 +81,7 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
-  custom: true
+  default: true
 
   load_from: null
   inference: false

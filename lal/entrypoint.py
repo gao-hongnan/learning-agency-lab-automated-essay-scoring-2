@@ -296,8 +296,8 @@ def main(composer: Composer, state: State) -> None:
     # see https://discuss.huggingface.co/t/difference-between-automodel-and-automodelforlm/5967
 
     if composer.shared.default:
-        if not composer.shared.pooler_type:
-            raise ValueError("Cannot have `default` without `pooler_type`.")
+        if composer.shared.pooler_type:
+            raise ValueError("Cannot have `default` with `pooler_type`.")
 
         if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is not None:
             raise ValueError("Invalid `criterion` with `default`.")
