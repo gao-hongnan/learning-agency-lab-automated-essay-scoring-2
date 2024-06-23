@@ -1,31 +1,36 @@
-from typing import List, Union, Dict, Mapping, Optional, Tuple, TypedDict
-import torch
-import os
 import json
-import numpy as np
-from functools import partial
+import os
 from contextlib import nullcontext
-from transformers import AutoModel, PreTrainedTokenizerFast, BatchEncoding, DataCollatorWithPadding
-from transformers.modeling_utils import PreTrainedModel
-from transformers.models.auto import AutoTokenizer
-from transformers.models.mistral.modeling_mistral import MISTRAL_INPUTS_DOCSTRING
+from functools import partial
+from typing import Dict, List, Mapping, Optional, Tuple, TypedDict, Union
+
+import numpy as np
+import torch
+from datasets import Dataset
+from einops import rearrange, repeat
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
+from transformers import (
+    AutoModel,
+    BatchEncoding,
+    DataCollatorWithPadding,
+    MistralConfig,
+    MistralModel,
+    MistralPreTrainedModel,
+    PreTrainedTokenizerFast,
+)
+from transformers.cache_utils import Cache, DynamicCache
+from transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_attention_mask_for_sdpa
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_attention_mask_for_sdpa
-from transformers import MistralModel, MistralConfig, MistralPreTrainedModel
-from transformers.cache_utils import Cache, DynamicCache
-from transformers.utils import (
-    add_start_docstrings_to_model_forward,
-    logging,
-)
-from einops import rearrange, repeat
-from tqdm.auto import tqdm
-from datasets import Dataset
-from torch.utils.data import DataLoader
+from transformers.modeling_utils import PreTrainedModel
+from transformers.models.auto import AutoTokenizer
+from transformers.models.mistral.modeling_mistral import MISTRAL_INPUTS_DOCSTRING
+from transformers.utils import add_start_docstrings_to_model_forward, logging
 
 logger = logging.get_logger(__name__)
 
@@ -35,10 +40,9 @@ class BidirectionalMistralConfig(MistralConfig):
     keys_to_ignore_at_inference = ["past_key_values"]
 
 
-
 class BidirectionalMistralModel(MistralModel):
     config_class = BidirectionalMistralConfig
-    
+
     def __init__(self, config: MistralConfig):
         super().__init__(config)
         for layer in self.layers:
@@ -118,13 +122,12 @@ class BidirectionalMistralModel(MistralModel):
         elif self._attn_implementation == "sdpa" and not output_attentions:
             # output_attentions=True can not be supported when using SDPA, and we fall back on
             # the manual implementation that requires a 4D causal mask in all cases.
-            attention_mask = _prepare_4d_attention_mask_for_sdpa(
-                attention_mask, inputs_embeds.dtype
-            )
+            attention_mask = _prepare_4d_attention_mask_for_sdpa(attention_mask, inputs_embeds.dtype)
         else:
             # 4d mask is passed through the layers
             attention_mask = _prepare_4d_attention_mask(
-                attention_mask, inputs_embeds.dtype,
+                attention_mask,
+                inputs_embeds.dtype,
             )
 
         hidden_states = inputs_embeds
