@@ -55,6 +55,10 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
     if config.criterion == "reg_cls_loss":
         return RegLossForClassification(**config.criterion_config)
 
+    if config.criterion == "huber":
+        # see intuition: https://www.kaggle.com/code/emiz6413/cv-0-825-lb-0-803-deberta-v3-small-with-huber-loss
+        return nn.HuberLoss(**config.criterion_config)
+
     raise ValueError(f"Criterion {config.criterion} is not supported.")
 
 
