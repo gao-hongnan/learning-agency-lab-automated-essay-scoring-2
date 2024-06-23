@@ -30,7 +30,7 @@ def process_labels(df: pd.DataFrame, task: str, target_column: str = "score") ->
     """
     df["label"] = df[target_column].apply(lambda x: x - 1)
 
-    if task == "CLASSIFICATION":
+    if task == "SINGLE_LABEL_CLASSIFICATION":
         df["label"] = df["label"].astype("int32")
     elif task == "REGRESSION":
         df["label"] = df["label"].astype("float32")
@@ -126,7 +126,7 @@ def preprocess(
             return formatted_sample
         return tokenized_sample
 
-    elif task in ["CLASSIFICATION", "REGRESSION"]:
+    elif task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         tokenized_sample = tokenizer(
             # sample["description"],
             sample["full_text"],

@@ -1,7 +1,8 @@
+#!/bin/sh
+
 # filepaths all put inside `lal/data/` directory, `topics_map.json` is inside
 # `lal/conf/` directory.
 
-export ALLOW_WANDB=true && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.taks=REGRESSION \
@@ -18,7 +19,6 @@ python -m lal.entrypoint_local \
     shared.pretrained_model_name_or_path=microsoft/deberta-v3-base \
     shared.target_artifacts_dir=./artifacts \
     shared.verbose=False \
-    shared.default=True \
     shared.greater_is_better=True \
     shared.learning_rate=3e-5 \
     shared.lr_scheduler_type=cosine \
@@ -31,4 +31,7 @@ python -m lal.entrypoint_local \
     shared.report_to=none \
     shared.warmup_ratio=0 \
     shared.desired_effective_batch_size=16 \
-    shared.enable_mixed_precision=True
+    shared.enable_mixed_precision=True \
+    shared.default=True \
+    shared.criterion=null \
+    shared.pooler_type=null

@@ -118,7 +118,7 @@ class Shared(BaseModel):
     # by propagating these to State(...)
 
     # some misc stats
-    task: Literal["CAUSAL_LM", "CLASSIFICATION", "REGRESSION"] = "CLASSIFICATION" # NOTE: this is similar to task_type in lora but difference is task_type in lora dont have regression for instance
+    task: Literal["CAUSAL_LM", "SINGLE_LABEL_CLASSIFICATION", "MULTI_LABEL_CLASSIFICATION", "REGRESSION"] = "SINGLE_LABEL_CLASSIFICATION" # NOTE: this is similar to task_type in lora but difference is task_type in lora dont have regression for instance
 
     # wandb config
     project: str = "learning-agency-lab-automated-essay-scoring-2"
@@ -130,10 +130,14 @@ class Shared(BaseModel):
     mode: str | None = None
     name: str | None = None
 
-
     # dataset config
     train_filepath: str | None = None
     valid_filepath: str | None = None
+    pretraining_data_filepath: str | os.PathLike[str] | None = None
+    external_data_filepath: str | os.PathLike[str] | None = None
+    predicted_prompt_filepath: str | os.PathLike[str] | None = None
+    train_topic_filepath: str | os.PathLike[str] | None = None
+    topics_map_filepath: str | os.PathLike[str] | None = None
 
     ## prompting stuff
     system_prompt: str = "Please read the following essay and assign a score of 1,2,3,4,5,6 where 6 is the best. Output only a single number with no explanation.\n\n"
@@ -158,11 +162,6 @@ class Shared(BaseModel):
     target_column: str = "label"
     fold: int = 0
     debug_samples: int = 128
-    pretraining_data_filepath: str | os.PathLike[str] | None = None
-    external_data_filepath: str | os.PathLike[str] | None = None
-    predicted_prompt_filepath: str | os.PathLike[str] | None = None
-    train_topic_filepath: str | os.PathLike[str] | None = None
-    topics_map_filepath: str | os.PathLike[str] | None = None
 
     # tokenizer config
     ## from_pretrained(...)
@@ -211,8 +210,12 @@ class Shared(BaseModel):
     )
 
     ## pooler
-    pooler_type: Literal["mean", "attention", "gem"] | None = None
+    pooler_type: Literal["context", "mean", "attention", "gem"] | None = None
     pooler_config: dict[str, Any] = {}
+
+    # criterion
+    criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
+    criterion_config: dict[str, Any] = {}
 
     # ???
     pretrained_model_name_or_path: str = "mistralai/Mistral-7B-Instruct-v0.2"
@@ -243,9 +246,6 @@ class Shared(BaseModel):
     seed: int = 42
     seed_torch: bool = True
     set_torch_deterministic: bool = False
-
-    # criterion
-    criterion: str = "ordinal-log-loss" # ordinal-log-loss, cross-entropy, mse
 
     # training args -> take from training arg in hf or custom
     ## below is inside training args

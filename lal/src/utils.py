@@ -96,7 +96,7 @@ def load_model(
             **kwargs,
         )
 
-    if task in ["CLASSIFICATION", "REGRESSION"]:
+    if task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         return AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path,
             **kwargs,

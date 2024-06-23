@@ -34,6 +34,7 @@ from transformers import (
     AutoTokenizer,
     DataCollatorForSeq2Seq,
     DataCollatorWithPadding,
+    DebertaV2ForSequenceClassification,
     DebertaV2Tokenizer,
     PretrainedConfig,
     Trainer,
@@ -59,11 +60,12 @@ from .conf.config import (
     app,
 )
 from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
+from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import AttentionPooler, DebertaV2WithAttentionPooler, init_attention_pooler
+from .src.models import DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -225,7 +227,7 @@ def main(composer: Composer, state: State) -> None:
 
     # pprint(tokenizer.init_kwargs)
 
-    if composer.shared.task in ["CLASSIFICATION", "REGRESSION"]:
+    if composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         tokenizer.add_tokens([AddedToken("\n", normalized=False)])
         tokenizer.add_tokens([AddedToken(" " * 2, normalized=False)])
 
@@ -249,7 +251,7 @@ def main(composer: Composer, state: State) -> None:
 
     # collator for trainer
     # TODO: DataCollatorWithPadding which collator should I use?
-    if composer.shared.task in ["CLASSIFICATION", "REGRESSION"]:
+    if composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         data_collator = DataCollatorWithPadding(tokenizer, padding="longest")
     else:
         data_collator = DataCollatorForSeq2Seq(tokenizer, padding="longest")
@@ -265,15 +267,19 @@ def main(composer: Composer, state: State) -> None:
         output_attentions=composer.shared.output_attentions,
     )
 
-    if composer.shared.task == "CLASSIFICATION":
+    base_model_config.num_labels = composer.shared.num_labels
+    base_model_config.criterion = composer.shared.criterion
+    base_model_config.criterion_config = composer.shared.criterion_config
+    base_model_config.pooler_type = composer.shared.pooler_type
+    base_model_config.pooler_config = composer.shared.pooler_config
+
+    if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"
-        base_model_config.num_labels = composer.shared.num_labels
     elif composer.shared.task == "REGRESSION":
+        assert base_model_config.num_labels == 1
         base_model_config.problem_type = "regression"
-        base_model_config.num_labels = composer.shared.num_labels
-        base_model_config.attention_dropout = (
-            0.0  # see https://www.kaggle.com/competitions/commonlitreadabilityprize/discussion/260729
-        )
+        # all dropout=0 - see https://www.kaggle.com/competitions/commonlitreadabilityprize/discussion/260729
+        base_model_config.attention_dropout = 0.0
         base_model_config.attention_probs_dropout_prob = 0.0
         base_model_config.hidden_dropout_prob = 0.0
         base_model_config.pooler_dropout = 0.0
@@ -301,7 +307,7 @@ def main(composer: Composer, state: State) -> None:
         if composer.shared.pooler_type:
             raise ValueError("Cannot have `default` with `pooler_type`.")
 
-        if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is None:
+        if composer.shared.criterion not in ["bce", "cross_entropy", "mse", None]:
             raise ValueError("Invalid `criterion` with `default`.")
 
         base_model = load_model(
@@ -321,11 +327,10 @@ def main(composer: Composer, state: State) -> None:
         # )
         # base_model.pooler.apply(init_attention_pooler)
     else:
-        if composer.shared.pooler_type == "attention":
-            base_model = DebertaV2WithAttentionPooler(config=base_model_config)
-
-        if composer.shared.criterion == "ordinal-log-loss":
-            base_model = DebertaV2OLL(config=base_model_config)
+        base_model = SubclassedDebertaV2ForSequenceClassification.from_pretrained(
+            pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
+            config=base_model_config,
+        )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
@@ -340,8 +345,12 @@ def main(composer: Composer, state: State) -> None:
         )
     # update this at the end?
     state.base_model_config = base_model.config.to_dict()
-
     pprint(base_model)
+
+    try:
+        logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
+    except AttributeError as exc:
+        raise ValueError("Model does not have `classifier` attribute.") from exc
 
     # NOTE: get named modules and try to derive the last module name
     base_model_named_modules = get_named_modules(base_model)
@@ -370,7 +379,6 @@ def main(composer: Composer, state: State) -> None:
     sample_batch = [tokenized_train_dataset[i] for i in range(2)]
     collated_sample_batch = data_collator(sample_batch)  # 2 samples
     if composer.shared.dry_run:
-        pprint(collated_sample_batch["labels"])
         logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
         logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
         logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
@@ -439,8 +447,8 @@ def main(composer: Composer, state: State) -> None:
         raise ValueError(
             f"Desired effective batch size {composer.shared.desired_effective_batch_size} is less than per device train batch size {composer.shared.per_device_train_batch_size}."
         )
-    composer.shared.gradient_accumulation_steps = (
-        composer.shared.desired_effective_batch_size // composer.shared.per_device_train_batch_size
+    composer.shared.gradient_accumulation_steps = composer.shared.desired_effective_batch_size // (
+        composer.shared.per_device_train_batch_size * local_world_size * world_size
     )
 
     effective_train_batch_size = (
@@ -449,7 +457,6 @@ def main(composer: Composer, state: State) -> None:
         * local_world_size
         * world_size
     )
-    pprint(effective_train_batch_size)
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
     total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs
 
@@ -546,7 +553,7 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(training_args)
 
-    if composer.shared.task == "CLASSIFICATION":
+    if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         compute_metrics = compute_metrics_for_classification
     elif composer.shared.task == "REGRESSION":
         compute_metrics = compute_metrics_for_regression
@@ -554,7 +561,6 @@ def main(composer: Composer, state: State) -> None:
         compute_metrics = None
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
-    pprint(model)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -568,7 +574,7 @@ def main(composer: Composer, state: State) -> None:
         if (
             composer.shared.use_lora
             and "Mistral" in composer.shared.pretrained_model_name_or_path
-            and composer.shared.task in ["CLASSIFICATION", "REGRESSION"]
+            and composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]
         ):
             trainer.add_callback(SaveLoraHeadCallback(model))
 
@@ -585,7 +591,6 @@ def main(composer: Composer, state: State) -> None:
         trainer.save_state()
         tokenizer.save_pretrained(composer.shared.output_dir)
         model.save_pretrained(composer.shared.output_dir)
-        pprint(model.state_dict().keys())
         if hasattr(trainer.model, "base_model") and hasattr(trainer.model.base_model, "model"):
             logger.info("Likely using PEFT. Saving base model.")
             pprint(trainer.model.base_model.model)
@@ -607,7 +612,7 @@ def main(composer: Composer, state: State) -> None:
                 valid_df.logits.values.clip(1, 6).round(0),
                 weights="quadratic",
             )
-        elif composer.shared.task == "CLASSIFICATION":
+        elif composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
             predictions = logits.argmax(axis=1) + 1
             columns = [f"p{x}" for x in range(composer.shared.num_labels)]
@@ -712,7 +717,7 @@ if __name__ == "__main__":
 
 python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
 learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=CLASSIFICATION \
+task=SINGLE_LABEL_CLASSIFICATION \
 shared.job_type=debug \
 shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
 shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \

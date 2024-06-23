@@ -1,5 +1,5 @@
-from torch import nn
 import torch
+from torch import nn
 
 
 class RegLossForClassification(nn.Module):
@@ -8,9 +8,9 @@ class RegLossForClassification(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss()
         self.softmax = nn.Softmax(dim=1)
         self.mse = nn.MSELoss()
-        
+
         self.alpha = alpha
-    
+
     def forward(self, logits, labels):
         bs = logits.shape[0]
         ce_loss = self.cross_entropy(logits, labels)
@@ -20,7 +20,7 @@ class RegLossForClassification(nn.Module):
         reg_scores = (probs * arange).sum(dim=-1)
         labels_float = labels.to(probs.dtype).to(probs.device)
         mse_loss = self.mse(reg_scores, labels_float)
-        
+
         loss = self.alpha * ce_loss / ce_loss.detach() + (1 - self.alpha) * mse_loss / mse_loss.detach()
-        
+
         return loss

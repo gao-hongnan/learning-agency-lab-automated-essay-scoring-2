@@ -81,6 +81,10 @@ shared:
   pooler_type: null # CHANGE
   pooler_config: {}
 
+  # criterion
+  criterion: null" # CHANGE
+  criterion_config: {}
+
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
@@ -102,9 +106,6 @@ shared:
   seed: 42
   seed_torch: true
   set_torch_deterministic: false
-
-  # criterion
-  criterion: "mse"
 
   adam_beta1: 0.9
   adam_beta2: 0.999

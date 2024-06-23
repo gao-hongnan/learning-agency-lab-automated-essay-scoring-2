@@ -231,7 +231,7 @@ def main(composer: Composer, state: State) -> None:
 
     # pprint(tokenizer.init_kwargs)
 
-    if composer.shared.task in ["CLASSIFICATION", "REGRESSION"]:
+    if composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         tokenizer.add_tokens([AddedToken("\n", normalized=False)])
         tokenizer.add_tokens([AddedToken(" " * 2, normalized=False)])
 
@@ -255,7 +255,7 @@ def main(composer: Composer, state: State) -> None:
 
     # collator for trainer
     # TODO: DataCollatorWithPadding which collator should I use?
-    if composer.shared.task in ["CLASSIFICATION", "REGRESSION"]:
+    if composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         data_collator = DataCollatorWithPadding(tokenizer, padding="longest")
     else:
         data_collator = DataCollatorForSeq2Seq(tokenizer, padding="longest")
@@ -271,15 +271,19 @@ def main(composer: Composer, state: State) -> None:
         output_attentions=composer.shared.output_attentions,
     )
 
-    if composer.shared.task == "CLASSIFICATION":
+    base_model_config.num_labels = composer.shared.num_labels
+    base_model_config.criterion = composer.shared.criterion
+    base_model_config.criterion_config = composer.shared.criterion_config
+    base_model_config.pooler_type = composer.shared.pooler_type
+    base_model_config.pooler_config = composer.shared.pooler_config
+
+    if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"
-        base_model_config.num_labels = composer.shared.num_labels
     elif composer.shared.task == "REGRESSION":
+        assert base_model_config.num_labels == 1
         base_model_config.problem_type = "regression"
-        base_model_config.num_labels = composer.shared.num_labels
-        base_model_config.attention_dropout = (
-            0.0  # see https://www.kaggle.com/competitions/commonlitreadabilityprize/discussion/260729
-        )
+        # all dropout=0 - see https://www.kaggle.com/competitions/commonlitreadabilityprize/discussion/260729
+        base_model_config.attention_dropout = 0.0
         base_model_config.attention_probs_dropout_prob = 0.0
         base_model_config.hidden_dropout_prob = 0.0
         base_model_config.pooler_dropout = 0.0
@@ -552,7 +556,7 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(training_args)
 
-    if composer.shared.task == "CLASSIFICATION":
+    if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         compute_metrics = compute_metrics_for_classification
     elif composer.shared.task == "REGRESSION":
         compute_metrics = compute_metrics_for_regression
@@ -574,7 +578,7 @@ def main(composer: Composer, state: State) -> None:
         if (
             composer.shared.use_lora
             and "Mistral" in composer.shared.pretrained_model_name_or_path
-            and composer.shared.task in ["CLASSIFICATION", "REGRESSION"]
+            and composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]
         ):
             trainer.add_callback(SaveLoraHeadCallback(model))
 
@@ -615,7 +619,7 @@ def main(composer: Composer, state: State) -> None:
                 valid_df.logits.values.clip(1, 6).round(0),
                 weights="quadratic",
             )
-        elif composer.shared.task == "CLASSIFICATION":
+        elif composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
             predictions = logits.argmax(axis=1) + 1
             columns = [f"p{x}" for x in range(composer.shared.num_labels)]
@@ -751,7 +755,7 @@ entrypoint("lal/conf/deberta_reg.yaml")
 
 python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
 learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=CLASSIFICATION \
+task=SINGLE_LABEL_CLASSIFICATION \
 shared.job_type=debug \
 shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
 shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \

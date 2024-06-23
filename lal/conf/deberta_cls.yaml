@@ -1,5 +1,5 @@
 shared:
-  task: "CLASSIFICATION"
+  task: "SINGLE_LABEL_CLASSIFICATION"
 
   # project configurations for experiment tracking - wandb
   project: "learning-agency-lab-automated-essay-scoring-2"
@@ -81,6 +81,10 @@ shared:
   pooler_type: null
   pooler_config: {}
 
+  # criterion
+  criterion: null # CHANGE
+  criterion_config: {}
+
   pretrained_model_name_or_path: "microsoft/deberta-v3-small" # CHANGE
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
@@ -102,9 +106,6 @@ shared:
   seed: 42
   seed_torch: true
   set_torch_deterministic: false
-
-  # criterion
-  criterion: "ordinal-log-loss" # CHANGE
 
   adam_beta1: 0.9
   adam_beta2: 0.999
