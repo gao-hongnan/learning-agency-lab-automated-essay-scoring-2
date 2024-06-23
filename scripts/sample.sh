@@ -1,3 +1,14 @@
+# BELOW TWO YIELDS SAME RESULTS
+# INFO: 2024-06-23 20:08:17,547: __main__  Sanity Check Last Layer Weights: -0.0143431295
+# INFO: 2024-06-23 20:08:17,635: __main__  Collated sample batch keys: dict_keys(['input_ids', 'token_type_ids', 'attention_mask', 'labels'])
+# INFO: 2024-06-23 20:08:17,635: __main__  Collated sample batch input_ids shape: torch.Size([2, 64])
+# INFO: 2024-06-23 20:08:17,635: __main__  Collated sample batch labels shape: torch.Size([2])
+# INFO: 2024-06-23 20:08:17,635: __main__  Collated sample batch attention_mask shape: torch.Size([2, 64])
+# INFO: 2024-06-23 20:08:17,775: __main__  Dry run status: SUCCESS
+# INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs keys: odict_keys(['loss', 'logits'])
+# INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs logits shape: torch.Size([2, 1])
+# INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs logits[0][0]: -0.27593312
+
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.taks=REGRESSION \

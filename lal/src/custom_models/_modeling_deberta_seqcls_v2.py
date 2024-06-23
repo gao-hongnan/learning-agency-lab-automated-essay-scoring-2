@@ -19,7 +19,7 @@ from .poolers import AttentionPooler, ContextPooler
 
 def get_pooler(config: DebertaV2Config) -> nn.Module:
     """Factory method to get pooler based on the config."""
-    if not hasattr(config, "pooler_type") or config.pooler_type == "context":
+    if not hasattr(config, "pooler_type") or config.pooler_type == "context" or config.pooler_type is None:
         return ContextPooler(config)
 
     elif config.pooler_type == "attention":
@@ -37,23 +37,23 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
     """Factory method to get loss based on the config."""
     if config.criterion is None:
         if config.problem_type == "regression":
-            return MSELoss()
+            return MSELoss(**config.criterion_config)
         if config.problem_type == "single_label_classification":
-            return CrossEntropyLoss()
+            return CrossEntropyLoss(**config.criterion_config)
         if config.problem_type == "multi_label_classification":
-            return BCEWithLogitsLoss()
+            return BCEWithLogitsLoss(**config.criterion_config)
 
     if config.criterion == "mse":
-        return MSELoss()
+        return MSELoss(**config.criterion_config)
 
     if config.criterion == "cross_entropy":
-        return CrossEntropyLoss()
+        return CrossEntropyLoss(**config.criterion_config)
 
     if config.criterion == "bce":
-        return BCEWithLogitsLoss()
+        return BCEWithLogitsLoss(**config.criterion_config)
 
     if config.criterion == "reg_cls_loss":
-        return RegLossForClassification()
+        return RegLossForClassification(**config.criterion_config)
 
     raise ValueError(f"Criterion {config.criterion} is not supported.")
 
