@@ -1,5 +1,58 @@
 # Learning Agency Lab Automated Essay Scoring 2
 
+## Entrypoint
+
+```bash
+~ $ git clone https://github.com/gao-hongnan/learning-agency-lab-automated-essay-scoring-2.git
+~ $ cd learning-agency-lab-automated-essay-scoring-2
+. $ python -m venv .venv
+. $ source .venv/bin/activate
+. (.venv) $ pip install -r requirements.txt
+```
+
+Make sure to add the training data in the `lal/data` directory.
+
+Sample command:
+
+```bash
+python -m lal.entrypoint_local \
+    lal/conf/deberta_reg.yaml \
+    shared.taks=REGRESSION \
+    shared.job_type=debug \
+    shared.num_labels=1 \
+    shared.fold=2 \
+    shared.padding_side=right \
+    shared.max_length=1024 \
+    shared.add_special_tokens=True \
+    shared.padding=max_length \
+    shared.output_hidden_states=False \
+    shared.output_attentions=False \
+    shared.pooler_type=null \
+    shared.pretrained_model_name_or_path=microsoft/deberta-v3-base \
+    shared.target_artifacts_dir=./artifacts \
+    shared.verbose=False \
+    shared.default=True \
+    shared.greater_is_better=True \
+    shared.learning_rate=3e-5 \
+    shared.lr_scheduler_type=cosine \
+    shared.max_grad_norm=10.0 \
+    shared.metric_for_best_model=eval_qwk \
+    shared.num_train_epochs=4 \
+    shared.optim=adamw_torch \
+    shared.per_device_train_batch_size=16 \
+    shared.per_device_eval_batch_size=16 \
+    shared.report_to=none \
+    shared.warmup_ratio=0 \
+    shared.desired_effective_batch_size=16 \
+    shared.enable_mixed_precision=True
+```
+
+If you need to use weights and biases, change or override `shared.entity` and also make sure the wandb API key is set. Then run with `ALLOW_WANDB` set to `True`.
+
+```bash
+export ALLOW_WANDB=True
+```
+
 ## Attention Pooling Patch
 
 - 918d0f306a5c3e8c9ef0db1752c5e5116adbcfdb
