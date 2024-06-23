@@ -392,6 +392,7 @@ def main(composer: Composer, state: State) -> None:
         logger.info("Dry run outputs keys: %s", outputs.keys())
         logger.info("Dry run outputs logits shape: %s", outputs["logits"].shape)
         logger.info("Dry run outputs logits[0][0]: %s", outputs["logits"][0][0].detach().cpu().numpy())
+        logger.info("Dry run outputs loss: %s", outputs["loss"].item())
 
     # NOTE: show model summary
     if composer.shared.show_model_summary:

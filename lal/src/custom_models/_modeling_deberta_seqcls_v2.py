@@ -87,13 +87,15 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-        self.loss_fct = get_loss(self.config)  # Factory method to get loss
 
     def get_input_embeddings(self) -> nn.Embedding:
         return self.deberta.get_input_embeddings()  # type: ignore[no-any-return]
 
     def set_input_embeddings(self, new_embeddings: nn.Embedding) -> None:
         self.deberta.set_input_embeddings(new_embeddings)
+
+    def _get_loss(self) -> nn.Module:
+        return get_loss(self.config)  # Factory method to get loss
 
     def forward(
         self,
@@ -132,15 +134,16 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         loss = None
         if labels is not None:
+            loss_fct = self._get_loss()
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = self.loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = self.loss_fct(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = self.loss_fct(logits, labels)
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + backbone_outputs[1:]

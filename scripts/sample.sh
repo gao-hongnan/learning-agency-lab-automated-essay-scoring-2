@@ -8,6 +8,7 @@
 # INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs keys: odict_keys(['loss', 'logits'])
 # INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs logits shape: torch.Size([2, 1])
 # INFO: 2024-06-23 20:08:17,776: __main__  Dry run outputs logits[0][0]: -0.27593312
+# INFO: 2024-06-23 22:01:04,191: __main__  Dry run outputs loss: 5.179263114929199
 
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
@@ -40,7 +41,8 @@ python -m lal.entrypoint_local \
     shared.enable_mixed_precision=True \
     shared.default=True \
     shared.criterion=null \
-    shared.pooler_type=null
+    shared.pooler_type=null \
+    shared.data_seed=null
 
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
@@ -73,7 +75,8 @@ python -m lal.entrypoint_local \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=mse \
-    shared.pooler_type=null
+    shared.pooler_type=null \
+    shared.data_seed=null
 
 # SAMPLE ATTENTION POOLER
 python -m lal.entrypoint_local \
