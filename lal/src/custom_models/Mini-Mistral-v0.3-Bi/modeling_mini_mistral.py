@@ -30,6 +30,8 @@ from torch.utils.data import DataLoader
 logger = logging.get_logger(__name__)
 
 
+BIDIR_MISTRAL_TYPE = "bidir_mistral"
+
 class BidirectionalMistralConfig(MistralConfig):
     model_type = BIDIR_MISTRAL_TYPE
     keys_to_ignore_at_inference = ["past_key_values"]
