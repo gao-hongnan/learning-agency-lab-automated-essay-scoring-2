@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import sys
 import types
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,7 @@ from transformers import (
     AutoTokenizer,
     DataCollatorForSeq2Seq,
     DataCollatorWithPadding,
+    DebertaV2ForSequenceClassification,
     DebertaV2Tokenizer,
     PretrainedConfig,
     Trainer,
@@ -57,11 +60,12 @@ from .conf.config import (
     app,
 )
 from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
+from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import AttentionPooler, DebertaV2WithAttentionPooler, init_attention_pooler
+from .src.models import DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -111,14 +115,14 @@ class ImmutableProxy:
         ) from None
 
 
-# @app.function(
-#     image=IMAGE,
-#     gpu=H100_80_GPU,
-#     timeout=int(Constants.TIMEOUT),
-#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-# )
+@app.function(
+    image=IMAGE,
+    gpu=H100_80_GPU,
+    timeout=int(Constants.TIMEOUT),
+    container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
+    volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
+    _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
+)
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -311,7 +315,7 @@ def main(composer: Composer, state: State) -> None:
         if composer.shared.pooler_type:
             raise ValueError("Cannot have `default` with `pooler_type`.")
 
-        if composer.shared.criterion not in ["cross-entropy", "mse"] or composer.shared.criterion is None:
+        if composer.shared.criterion not in ["bce", "cross_entropy", "mse", None]:
             raise ValueError("Invalid `criterion` with `default`.")
 
         base_model = load_model(
@@ -331,11 +335,10 @@ def main(composer: Composer, state: State) -> None:
         # )
         # base_model.pooler.apply(init_attention_pooler)
     else:
-        if composer.shared.pooler_type == "attention":
-            base_model = DebertaV2WithAttentionPooler(config=base_model_config)
-
-        if composer.shared.criterion == "ordinal-log-loss":
-            base_model = DebertaV2OLL(config=base_model_config)
+        base_model = SubclassedDebertaV2ForSequenceClassification.from_pretrained(
+            pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
+            config=base_model_config,
+        )
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")
@@ -350,8 +353,12 @@ def main(composer: Composer, state: State) -> None:
         )
     # update this at the end?
     state.base_model_config = base_model.config.to_dict()
-
     pprint(base_model)
+
+    try:
+        logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
+    except AttributeError as exc:
+        raise ValueError("Model does not have `classifier` attribute.") from exc
 
     # NOTE: get named modules and try to derive the last module name
     base_model_named_modules = get_named_modules(base_model)
@@ -380,7 +387,6 @@ def main(composer: Composer, state: State) -> None:
     sample_batch = [tokenized_train_dataset[i] for i in range(2)]
     collated_sample_batch = data_collator(sample_batch)  # 2 samples
     if composer.shared.dry_run:
-        pprint(collated_sample_batch["labels"])
         logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
         logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
         logger.info("Collated sample batch labels shape: %s", collated_sample_batch["labels"].shape)
@@ -444,20 +450,18 @@ def main(composer: Composer, state: State) -> None:
     local_world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     world_size = get_world_size() if torch.distributed.is_available() and torch.distributed.is_initialized() else 1
 
+    # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
     if composer.shared.desired_effective_batch_size < composer.shared.per_device_train_batch_size:
         raise ValueError(
             f"Desired effective batch size {composer.shared.desired_effective_batch_size} is less than per device train batch size {composer.shared.per_device_train_batch_size}."
         )
-
-    # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
-    composer.shared.gradient_accumulation_steps = (
-        composer.shared.desired_effective_batch_size // composer.shared.per_device_train_batch_size
+    composer.shared.gradient_accumulation_steps = composer.shared.desired_effective_batch_size // (
+        composer.shared.per_device_train_batch_size * world_size
     )
 
     effective_train_batch_size = (
         composer.shared.per_device_train_batch_size
         * composer.shared.gradient_accumulation_steps
-        * local_world_size
         * world_size
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
@@ -564,7 +568,6 @@ def main(composer: Composer, state: State) -> None:
         compute_metrics = None
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
-    pprint(model)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -595,13 +598,10 @@ def main(composer: Composer, state: State) -> None:
         trainer.save_state()
         tokenizer.save_pretrained(composer.shared.output_dir)
         model.save_pretrained(composer.shared.output_dir)
-        pprint(model.state_dict().keys())
-        # if hasattr(trainer.model, "base_model"):
-        #     logger.info("Saving base model.")
-        #     pprint(trainer.model.base_model.model)
-        #     trainer.model.base_model.model.save_pretrained(
-        #         f"{str(Constants.TARGET_ARTIFACTS_DIR)}/output_v{VER}/base_model"
-        #     )
+        if hasattr(trainer.model, "base_model") and hasattr(trainer.model.base_model, "model"):
+            logger.info("Likely using PEFT. Saving base model.")
+            pprint(trainer.model.base_model.model)
+            trainer.model.base_model.model.save_pretrained(composer.shared.output_dir)
 
     if ALLOW_WANDB and not IS_DEBUG:
         run.config.update(composer.model_dump())
@@ -690,11 +690,10 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-# @app.local_entrypoint()
+@app.local_entrypoint()
 def entrypoint(yaml_path: str) -> None:
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, [])
-    # cfg = merge_configs(yaml_cfg, args_list)
     om.resolve(cfg)
 
     composer = Composer(shared=Shared(**cfg.shared))
@@ -712,118 +711,4 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.cache_dir = "./.cache/huggingface"
         composer.shared.target_artifacts_dir = "./artifacts"
 
-    main(composer, state)
-    # main.remote(composer, state)
-
-
-# entrypoint("lal/conf/deberta_debug.yaml")
-# entrypoint("lal/conf/deberta_cls.yaml")
-entrypoint("lal/conf/deberta_reg.yaml")
-
-# if not IN_MODAL:
-#     entrypoint("lal/conf/deberta_reg.yaml")
-
-# if __name__ == "__main__":
-#     yaml_path = sys.argv[1]
-#     args_list = sys.argv[2:]
-
-#     yaml_cfg = load_yaml_config(yaml_path)
-#     cfg = merge_configs(yaml_cfg, args_list)
-#     om.resolve(cfg)  # inplace ops
-
-#     composer = Composer(shared=Shared(**cfg.shared))
-#     state = State()
-#     pprint(composer)
-#     pprint(state)
-#     # NOTE: base composer is basically an immutable copy of composer where the
-#     # base configurations provided by user are stored. Why this? Cause in ml,
-#     # it is often the case of modifying the configurations midway and we need to keep
-#     # track of the original configurations.
-#     base_composer = ImmutableProxy(composer.model_copy(update=None, deep=True))
-#     base_state = ImmutableProxy(state.model_copy(update=None, deep=True))
-
-#     IS_DEBUG = composer.shared.job_type == "debug"
-
-#     if IS_DEBUG:
-#         composer.shared.set_torch_deterministic = True
-#         composer.shared.max_length = 64
-
-#     main(composer, state)
-
-"""
-# DEBERTA DEBUG
-
-python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
-learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=SINGLE_LABEL_CLASSIFICATION \
-shared.job_type=debug \
-shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
-shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \
-shared.use_lora=False \
-shared.pretrained_model_name_or_path=microsoft/deberta-v3-small \
-shared.task_type='SEQ_CLS' \
-shared.target_modules='["query_proj", "key_proj", "value_proj"]' \
-shared.modules_to_save='["classifier"]' \
-shared.target_artifacts_dir=learning_agency_lab_automated_essay_scoring_2/artifacts \
-shared.metric_for_best_model='eval_qwk' \
-shared.greater_is_better=True \
-shared.lr_scheduler_type='cosine'
-
- {'eval_qwk': -0.15267175572519087, 'eval_loss': 1.4653687477111816}
-{'train_loss': 1.60413059592247}
-Validation QWK Score = -0.08688309251266646
-
-# MISTRAL DEBUG - CAUSAL_LM
-
-python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
-learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=CAUSAL_LM \
-shared.job_type=debug \
-shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
-shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \
-shared.use_lora=True \
-shared.pretrained_model_name_or_path=mistralai/Mistral-7B-Instruct-v0.2 \
-shared.task_type='CAUSAL_LM' \
-shared.modules_to_save='["score"]' \
-shared.padding_side='right' \
-shared.max_length=1536 \
-shared.torch_dtype='float32' \
-shared.cache_dir="/root/.cache/huggingface" \
-shared.base_learning_rate=5e-5 \
-shared.metric_for_best_model='eval_loss' \
-shared.greater_is_better=False \
-shared.lr_scheduler_type='cosine' \
-shared.warmup_ratio=0.05 \
-shared.num_train_epochs=2 \
-shared.per_device_train_batch_size=2 \
-shared.per_device_eval_batch_size=8
-
-export ALLOW_WANDB=true && \
-modal run --detach \
-learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
---yaml-path=./learning_agency_lab_automated_essay_scoring_2/mistral_causal.yaml
-
-export ALLOW_WANDB=true && \
-modal run --detach \
-lal.entrypoint \
---yaml-path=lal/conf/deberta_reg.yaml
-
-python -m lal.entrypoint
-
-
-export ALLOW_WANDB=true && \
-modal run --detach \
-lal.entrypoint \
---yaml-path=lal/conf/deberta_cls.yaml
-"""
-# export ALLOW_WANDB=true && modal run --detach learning_agency_lab_automated_essay_scoring_2.train --train-filepath=./learning_agency_lab_automated_essay_scoring_2/data/train.csv
-# modal shell learning_agency_lab_automated_essay_scoring_2.chris
-# modal volume ls artifacts-volume
-# modal volume get artifacts-volume f2_output_v20240622193051/valid_df_fold_2.csv .
-
-"""
-array(0.49022794, dtype=float32)
-
-array(-0.12705599, dtype=float32)
-Validation QWK Score = -0.06416748545083517
-"""
+    main.remote(composer, state)

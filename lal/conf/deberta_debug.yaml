@@ -77,6 +77,8 @@ shared:
   output_hidden_states: true
   output_attentions: false
 
+  default: false
+
   # pooler
   pooler_type: null # CHANGE
   pooler_config: {}
@@ -92,7 +94,6 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
-  default: true
 
   load_from: null
   inference: false

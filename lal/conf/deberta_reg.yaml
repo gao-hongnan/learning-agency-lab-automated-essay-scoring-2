@@ -34,7 +34,7 @@ shared:
   resample_params:
     n_splits: 7 # CHANGE
     shuffle: true
-    random_state: 42
+    random_state: 20230310
   # resample_strategy: "StratifiedGroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
   # resample_params:
   #   n_splits: 7 # CHANGE
@@ -77,12 +77,14 @@ shared:
   output_hidden_states: true
   output_attentions: false
 
+  default: false
+
   # pooler
-  pooler_type: null # CHANGE
+  pooler_type: attention # CHANGE
   pooler_config: {}
 
   # criterion
-  criterion: null" # CHANGE
+  criterion: mse # CHANGE
   criterion_config: {}
 
   pretrained_model_name_or_path: "microsoft/deberta-v3-base"
@@ -92,7 +94,6 @@ shared:
   verbose: true
   show_model_summary: true
   dry_run: true
-  default: true # CHANGE
 
   load_from: null
   inference: false
@@ -103,7 +104,7 @@ shared:
   freeze_embeddings: false
 
   # seed
-  seed: 42
+  seed: 20230310
   seed_torch: true
   set_torch_deterministic: false
 
@@ -111,7 +112,7 @@ shared:
   adam_beta2: 0.999
   adam_epsilon: 1e-6
   bf16: false
-  data_seed: null
+  data_seed: 20230310
   dataloader_num_workers: 0
   disable_tqdm: false
   do_eval: true
