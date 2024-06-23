@@ -14,11 +14,26 @@ from transformers import (
     PreTrainedTokenizerBase,
     PreTrainedTokenizerFast,
 )
-
+import json
 from .logger import get_logger
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
+def jsonify(obj: Any) -> Any:
+    """Converts the object to a JSON serializable format.
+
+    Parameters
+    ----------
+    obj : Any
+        Object to convert to JSON serializable format.
+
+    Returns
+    -------
+    Any
+        JSON serializable object.
+    """
+
+    return json.dumps(obj, indent=4)
 
 def load_tokenizer(
     pretrained_model_name_or_path: str, **kwargs: Any

@@ -6,7 +6,8 @@ import logging
 import types
 from pathlib import Path
 from typing import Any
-
+import sys
+import json
 import pandas as pd
 import torch
 import torch.distributed
@@ -111,14 +112,7 @@ class ImmutableProxy:
         ) from None
 
 
-# @app.function(
-#     image=IMAGE,
-#     gpu=H100_80_GPU,
-#     timeout=int(Constants.TIMEOUT),
-#     container_idle_timeout=int(Constants.CONTAINER_IDLE_TIMEOUT),
-#     volumes={Constants.TARGET_ARTIFACTS_DIR: VOLUME},
-#     _allow_background_volume_commits=True,  # docs say is best to set to True if don't use volume.commit(), see https://modal.com/docs/guide/volumes#huggingface-transformers
-# )
+
 def main(composer: Composer, state: State) -> None:
     IS_DEBUG = composer.shared.job_type == "debug"  # redundant call but needed for modal
     # NOTE: seed all
@@ -440,12 +434,11 @@ def main(composer: Composer, state: State) -> None:
     local_world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     world_size = get_world_size() if torch.distributed.is_available() and torch.distributed.is_initialized() else 1
 
+    # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
     if composer.shared.desired_effective_batch_size < composer.shared.per_device_train_batch_size:
         raise ValueError(
             f"Desired effective batch size {composer.shared.desired_effective_batch_size} is less than per device train batch size {composer.shared.per_device_train_batch_size}."
         )
-
-    # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
     composer.shared.gradient_accumulation_steps = (
         composer.shared.desired_effective_batch_size // composer.shared.per_device_train_batch_size
     )
@@ -456,6 +449,7 @@ def main(composer: Composer, state: State) -> None:
         * local_world_size
         * world_size
     )
+    pprint(effective_train_batch_size)
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
     total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs
 
@@ -592,12 +586,10 @@ def main(composer: Composer, state: State) -> None:
         tokenizer.save_pretrained(composer.shared.output_dir)
         model.save_pretrained(composer.shared.output_dir)
         pprint(model.state_dict().keys())
-        # if hasattr(trainer.model, "base_model"):
-        #     logger.info("Saving base model.")
-        #     pprint(trainer.model.base_model.model)
-        #     trainer.model.base_model.model.save_pretrained(
-        #         f"{str(Constants.TARGET_ARTIFACTS_DIR)}/output_v{VER}/base_model"
-        #     )
+        if hasattr(trainer.model, "base_model") and hasattr(trainer.model.base_model, "model"):
+            logger.info("Likely using PEFT. Saving base model.")
+            pprint(trainer.model.base_model.model)
+            trainer.model.base_model.model.save_pretrained(composer.shared.output_dir)
 
     if ALLOW_WANDB and not IS_DEBUG:
         run.config.update(composer.model_dump())
@@ -686,17 +678,22 @@ def main(composer: Composer, state: State) -> None:
         f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
 
 
-# @app.local_entrypoint()
-def entrypoint(yaml_path: str) -> None:
+if __name__ == "__main__":
+    yaml_path = sys.argv[1]
+    args_list = sys.argv[2:]
+
     yaml_cfg = load_yaml_config(yaml_path)
-    cfg = merge_configs(yaml_cfg, [])
-    # cfg = merge_configs(yaml_cfg, args_list)
-    om.resolve(cfg)
+    cfg = merge_configs(yaml_cfg, args_list)
+    om.resolve(cfg)  # inplace ops
 
     composer = Composer(shared=Shared(**cfg.shared))
     state = State()
     pprint(composer)
     pprint(state)
+    # NOTE: base composer is basically an immutable copy of composer where the
+    # base configurations provided by user are stored. Why this? Cause in ml,
+    # it is often the case of modifying the configurations midway and we need to keep
+    # track of the original configurations.
     base_composer = ImmutableProxy(composer.model_copy(update=None, deep=True))
     base_state = ImmutableProxy(state.model_copy(update=None, deep=True))
 
@@ -709,42 +706,6 @@ def entrypoint(yaml_path: str) -> None:
         composer.shared.target_artifacts_dir = "./artifacts"
 
     main(composer, state)
-    # main.remote(composer, state)
-
-
-# entrypoint("lal/conf/deberta_debug.yaml")
-# entrypoint("lal/conf/deberta_cls.yaml")
-entrypoint("lal/conf/deberta_reg.yaml")
-
-# if not IN_MODAL:
-#     entrypoint("lal/conf/deberta_reg.yaml")
-
-# if __name__ == "__main__":
-#     yaml_path = sys.argv[1]
-#     args_list = sys.argv[2:]
-
-#     yaml_cfg = load_yaml_config(yaml_path)
-#     cfg = merge_configs(yaml_cfg, args_list)
-#     om.resolve(cfg)  # inplace ops
-
-#     composer = Composer(shared=Shared(**cfg.shared))
-#     state = State()
-#     pprint(composer)
-#     pprint(state)
-#     # NOTE: base composer is basically an immutable copy of composer where the
-#     # base configurations provided by user are stored. Why this? Cause in ml,
-#     # it is often the case of modifying the configurations midway and we need to keep
-#     # track of the original configurations.
-#     base_composer = ImmutableProxy(composer.model_copy(update=None, deep=True))
-#     base_state = ImmutableProxy(state.model_copy(update=None, deep=True))
-
-#     IS_DEBUG = composer.shared.job_type == "debug"
-
-#     if IS_DEBUG:
-#         composer.shared.set_torch_deterministic = True
-#         composer.shared.max_length = 64
-
-#     main(composer, state)
 
 """
 # DEBERTA DEBUG
