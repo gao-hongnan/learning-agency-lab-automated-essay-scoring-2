@@ -22,6 +22,7 @@ from transformers.utils import (
     add_start_docstrings_to_model_forward,
     logging,
 )
+from torch import nn
 from einops import rearrange, repeat
 from tqdm.auto import tqdm
 from datasets import Dataset
