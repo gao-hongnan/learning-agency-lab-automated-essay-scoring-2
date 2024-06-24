@@ -32,7 +32,7 @@ shared:
   # split/resample strategy
   resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
   resample_params:
-    n_splits: 7 # CHANGE
+    n_splits: 5 # CHANGE
     shuffle: true
     random_state: 20230310
   # resample_strategy: "StratifiedGroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
