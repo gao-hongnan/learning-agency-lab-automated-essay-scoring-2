@@ -402,7 +402,10 @@ def main(composer: Composer, state: State) -> None:
         torchinfo.summary(
             base_model,
             verbose=1,
-            input_data=collated_sample_batch["input_ids"],
+            input_data={
+                "input_ids": collated_sample_batch["input_ids"],
+                "attention_mask": collated_sample_batch["attention_mask"],
+            },
             dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
             device=base_model.device,
         )

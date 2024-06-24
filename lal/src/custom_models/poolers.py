@@ -251,6 +251,7 @@ class GemPooler(nn.Module):
     def output_dim(self) -> int:
         return self._output_dim
 
+
 # no test
 class LatentAttentionPooler(nn.Module):
     def __init__(self, backbone_config, pooling_config):
