@@ -152,7 +152,6 @@ python -m lal.entrypoint_local \
     shared.resample_params.n_splits=7 \
     shared.resample_params.shuffle=true \
     shared.resample_params.random_state=20230310 \
-    random_state: 20230310 \
     shared.num_labels=1 \
     shared.fold=2 \
     shared.padding_side=right \

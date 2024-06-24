@@ -114,6 +114,7 @@ shared:
   bf16: false
   data_seed: null
   dataloader_num_workers: 0
+  ddp_find_unused_parameters: null
   disable_tqdm: false
   do_eval: true
   do_predict: false

@@ -251,6 +251,7 @@ class Shared(BaseModel):
     ## below is inside training args
     output_dir: str | None = None
     overwrite_output_dir: bool = True
+    ddp_find_unused_parameters: bool | None = None # False if DDP
     do_train: bool = Field(
         default=True,
         description="Whether to run training or not. This argument is not directly used by `Trainer`, "

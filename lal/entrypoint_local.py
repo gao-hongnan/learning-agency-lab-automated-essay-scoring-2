@@ -517,6 +517,7 @@ def main(composer: Composer, state: State) -> None:
         adam_epsilon=composer.shared.adam_epsilon,
         bf16=composer.shared.bf16,
         data_seed=composer.shared.data_seed,
+        ddp_find_unused_parameters=composer.shared.ddp_find_unused_parameters,
         disable_tqdm=composer.shared.disable_tqdm,
         do_eval=composer.shared.do_eval,
         do_predict=composer.shared.do_predict,
