@@ -43,6 +43,7 @@ def init_attention_pooler(module: nn.Module) -> None:
             module.bias.data.fill_(0.0)
 
 # todo change constructor to config @gaohn
+# add a backbone type to slice the CLS (0, encoder) or last token (-1, decoder)  @gaohn
 class AttentionPooler(nn.Module):
     def __init__(
         self,
@@ -222,24 +223,24 @@ class MeanPooling(nn.Module):
         return mean_embeddings
 
 
-# class GemPooling(nn.Module):
-#     def __init__(self, backbone_config, pooling_config):
-#         super().__init__()
+class GemPooling(nn.Module):
+    def __init__(self, backbone_config, pooling_config):
+        super().__init__()
 
-#         self.dim = backbone_config.hidden_size
-#         self.eps = pooling_config.eps
-#         self.p = Parameter(torch.ones(1) * pooling_config.p)
+        self.dim = backbone_config.hidden_size
+        self.eps = pooling_config.eps
+        self.p = Parameter(torch.ones(1) * pooling_config.p)
 
-#         self.output_dim = backbone_config.hidden_size
+        self.output_dim = backbone_config.hidden_size
 
-#     def forward(self, inputs, backbone_output):
-#         attention_mask = get_attention_mask(inputs)
-#         x = get_last_hidden_state(backbone_output)
+    def forward(self, backbone_output, attention_mask):
+        last_hidden_state = backbone_outputs.last_hidden_state
+        
 
-#         attention_mask_expanded = attention_mask.unsqueeze(-1).expand(x.size())
-#         x = torch.sum((x.clamp(min=self.eps) * attention_mask_expanded).pow(self.p), 1)
-#         ret = x / attention_mask_expanded.sum(1).clip(min=self.eps)
-#         ret = ret.pow(1 / self.p)
-#         return ret
+        attention_mask_expanded = attention_mask.unsqueeze(-1).expand(x.size())
+        last_hidden_state = torch.sum((last_hidden_state.clamp(min=self.eps) * attention_mask_expanded).pow(self.p), 1)
+        ret = last_hidden_state / attention_mask_expanded.sum(1).clip(min=self.eps)
+        ret = ret.pow(1 / self.p)
+        return ret
 
 
