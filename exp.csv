@@ -1,3 +1,6 @@
-﻿run name,resampling,effective bs,effective lr,model,task,pool,loss,oof,lb
-v20240621232200,skf-7folds,16,2.00E-05,deberta base,reg,null,mse,0.833704223,0.801
-v20240623204604,skf-7folds,8,1.00E-05,deberta base,reg,attention,mse,,
+﻿run name,resampling,effective bs,effective lr,model,task,pool,loss,train/infer max len,threshold,oof,lb,,,comments,git,
+v20240621232200,skf-7,16,2.00E-05,deberta base,reg,null,mse,1024/1024,null,0.833704223,0.801,,,-0.032704223,,
+v20240623204604,skf-7,8,1.00E-05,deberta base,reg,attention,mse,1024/1024,null,0.829403219,0.798,,,-0.031403219,,
+v20240624231703,skf-5,8,1.00E-05,deberta small,reg,null,mse,1024/1024,null,0.820410179,0.803,,,-0.017410179,6c06a4bdcc0faad853a04eaa48d044ac7440d186,https://www.kaggle.com/code/reighns/v20240624231703-all-folds-inference?scriptVersionId=185266778
+v20240624231703,skf-5,8,1.00E-05,deberta small,reg,null,mse,1024/1024,yes,0.828053469,0.517,,,-0.311053469,6c06a4bdcc0faad853a04eaa48d044ac7440d186,s
+v20240625063058,fullfit,8,1.00E-05,deberta small,reg,null,mse,1024/1024,null,0.885310683,0.794,,,-0.091310683,6c06a4bdcc0faad853a04eaa48d044ac7440d186,

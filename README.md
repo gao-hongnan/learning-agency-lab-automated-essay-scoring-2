@@ -110,7 +110,7 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 -   https://github.com/huggingface/transformers/issues/23165
 -   https://github.com/huggingface/peft/issues/341#issuecomment-1884911753
 
-# TODO
+# Tricks and Strategies
 
 ## Stratified(Group)KFold
 
@@ -120,6 +120,7 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 ## Optimized Threshold For Regression
 
 -   [https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279](https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279)
+-   https://www.kaggle.com/code/cdeotte/rapids-svr-starter-cv-0-830-lb-0-804#Find-QWK-Thresholds
 
 ## Pooling
 
