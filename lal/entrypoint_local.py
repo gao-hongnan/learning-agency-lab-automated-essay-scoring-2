@@ -193,6 +193,7 @@ def main(composer: Composer, state: State) -> None:
         stratify_by=composer.shared.stratify_by,
         fold_column=composer.shared.fold_column,
     )
+    df.to_csv(f"{str(composer.shared.output_dir)}/train_df_fold_{composer.shared.fold}.csv", index=False)
     pprint(df.groupby(["fold", "label"]).size())
 
     # load data based on job type, whether to use external data, or pretrain etc
@@ -450,14 +451,11 @@ def main(composer: Composer, state: State) -> None:
             f"Desired effective batch size {composer.shared.desired_effective_batch_size} is less than per device train batch size {composer.shared.per_device_train_batch_size}."
         )
     composer.shared.gradient_accumulation_steps = composer.shared.desired_effective_batch_size // (
-        composer.shared.per_device_train_batch_size * local_world_size * world_size
+        composer.shared.per_device_train_batch_size * world_size
     )
 
     effective_train_batch_size = (
-        composer.shared.per_device_train_batch_size
-        * composer.shared.gradient_accumulation_steps
-        * local_world_size
-        * world_size
+        composer.shared.per_device_train_batch_size * composer.shared.gradient_accumulation_steps * world_size
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
     total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs
@@ -536,6 +534,7 @@ def main(composer: Composer, state: State) -> None:
         load_best_model_at_end=composer.shared.load_best_model_at_end,
         logging_dir=composer.shared.logging_dir,
         logging_steps=composer.shared.logging_steps,
+        logging_strategy=composer.shared.logging_strategy,
         lr_scheduler_type=composer.shared.lr_scheduler_type,
         max_grad_norm=composer.shared.max_grad_norm,
         metric_for_best_model=composer.shared.metric_for_best_model,
