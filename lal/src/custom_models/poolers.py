@@ -9,6 +9,7 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config, 
 from .modeling_latent_attention import LatentAttentionConfig, LatentAttentionModel
 from transformers import AutoModel
 
+
 class ContextPooler(nn.Module):
     def __init__(self, config: DebertaV2Config) -> None:
         super().__init__()
@@ -247,13 +248,12 @@ class GemPooling(nn.Module):
 # no test
 class LatentAttentionPooler(nn.Module):
     def __init__(self, backbone_config, pooling_config):
-        super().__init__()
-        pooling_config.output_normalize = False
-        self.latent_attention_model = AutoModel.from_config(pooling_config)
+        super().__init__()            
+        self.latent_attention_model = LatentAttentionModel(pooling_config)
         
         
     def forward(self, backbone_output, attention_mask):
-        last_hidden_state = backbone_outputs.last_hidden_state
+        last_hidden_state = backbone_output.last_hidden_state
         ## latent attention layer
         hidden = self.latent_attention_model(
             last_hidden_state,

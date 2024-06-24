@@ -6,6 +6,7 @@ import numpy as np
 from functools import partial
 from contextlib import nullcontext
 from transformers import AutoModel, PreTrainedTokenizerFast, BatchEncoding, DataCollatorWithPadding
+from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.auto import AutoTokenizer
 from transformers.models.mistral.modeling_mistral import MISTRAL_INPUTS_DOCSTRING
@@ -35,12 +36,12 @@ class LatentAttentionConfig(PretrainedConfig):
 
     def __init__(
         self,
-        num_latents_value: int=512,
+        num_latents_value: int=96,
         num_cross_heads: int=8,
         output_normalize: bool=True,
-        hidden_dim: int=4096,
-        latent_dim: int=4096,
-        cross_dim_head: int=4096,
+        hidden_dim: int=768,
+        latent_dim: int=768,
+        cross_dim_head: int=768,
         **kwargs,
     ):
         self.num_latents_value = num_latents_value
