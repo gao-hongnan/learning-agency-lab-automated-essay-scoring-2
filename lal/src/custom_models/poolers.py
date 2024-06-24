@@ -15,7 +15,12 @@ class ContextPooler(nn.Module):
         self.dropout = StableDropout(config.pooler_dropout)
         self.config = config
 
-    def forward(self, backbone_outputs: BaseModelOutput, _input_ids: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(
+        self,
+        backbone_outputs: BaseModelOutput,
+        _input_ids: torch.Tensor | None = None,
+        _attention_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         last_hidden_state: torch.Tensor = backbone_outputs.last_hidden_state
@@ -33,9 +38,10 @@ class ContextPooler(nn.Module):
 
 def init_attention_pooler(module: nn.Module) -> None:
     if isinstance(module, nn.Linear):
-        torch.nn.init.normal_(module.weight, mean=0.0, std=0.1) # torch.nn.init.xavier_normal_(module.weight)
+        torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)  # torch.nn.init.xavier_normal_(module.weight)
         if module.bias is not None:
             module.bias.data.fill_(0.0)
+
 
 class AttentionPooler(nn.Module):
     def __init__(
@@ -92,7 +98,7 @@ class AttentionPooler(nn.Module):
         self,
         backbone_outputs: BaseModelOutput,
         _input_ids: torch.Tensor | None = None,
-        _attention_mask: torch.Tensor | None = None
+        _attention_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Use deberta example:
         See `SequenceClassifierOutput` `hidden_states` shapeis a tuple of all
@@ -126,16 +132,14 @@ class AttentionPooler(nn.Module):
         out = self.dropout(out)
         return out
 
-    def attention(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: torch.Tensor | None = None
-    ) -> torch.Tensor:
+    def attention(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         weights_q = self.q.weight  # [1, hidden_size]
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
 
         if attention_mask is not None:
-            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states.dtype).min # torch.finfo(hidden_states.dtype).min -> almost -inf
+            attention_mask = (1.0 - attention_mask) * torch.finfo(
+                hidden_states.dtype
+            ).min  # torch.finfo(hidden_states.dtype).min -> almost -inf
             v = v + attention_mask
 
         v = F.softmax(v, dim=-1)
