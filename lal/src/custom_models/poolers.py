@@ -103,7 +103,12 @@ class AttentionPooler(nn.Module):
         # nn.init.normal_(self.q_transform.weight, mean=0.0, std=0.1)
         # nn.init.normal_(self.w_h_transform.weight, mean=0.0, std=0.1)
 
-    def forward(self, backbone_outputs: BaseModelOutput, _inputs: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(
+        self, 
+        backbone_outputs: BaseModelOutput, 
+        _inputs: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Use deberta example:
         See `SequenceClassifierOutput` `hidden_states` shapeis a tuple of all
         layers hidden states - including the embedding layer - but we want the
@@ -132,13 +137,22 @@ class AttentionPooler(nn.Module):
             dim=-1,
         )
         hidden_states = hidden_states.view(-1, self.num_hidden_layers, self.hidden_size)
-        out = self.attention(hidden_states)
+        out = self.attention(hidden_states, attention_mask)
         out = self.dropout(out)
         return out
 
-    def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
+    def attention(
+        self, 
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor
+    ) -> torch.Tensor:
         weights_q = self.q.weight  # [1, hidden_size]
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
+
+        if attention_mask is not None:
+            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states).min
+            v = v + attention_mask
+
         v = F.softmax(v, dim=-1)
 
         weights_w_h = self.w_h.weight  # shape: (pooler_hidden_dim_fc, hidden_size)
@@ -146,7 +160,6 @@ class AttentionPooler(nn.Module):
         v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
         v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
-
     # def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
     #     # weights_q = self.q.weight # [1, hidden_size]
     #     # v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
