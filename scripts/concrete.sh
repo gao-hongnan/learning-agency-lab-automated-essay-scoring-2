@@ -229,7 +229,7 @@ python -m lal.entrypoint_local \
 # small-5folds
 
 nohup sh -c 'export ALLOW_WANDB=true && \
-export CUDA_VISIBLE_DEVICES=1 && \
+export CUDA_VISIBLE_DEVICES=2 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=REGRESSION \
@@ -239,7 +239,7 @@ python -m lal.entrypoint_local \
     shared.resample_params.n_splits=5 \
     shared.resample_params.shuffle=true \
     shared.resample_params.random_state=42 \
-    shared.fold=0 \
+    shared.fold=2 \
     shared.padding_side=right \
     shared.max_length=1024 \
     shared.add_special_tokens=True \
@@ -273,4 +273,4 @@ python -m lal.entrypoint_local \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=mse \
-    shared.pooler_type=null' > ./artifacts/nohup_chris_f0.log 2>&1 &
+    shared.pooler_type=null' > ./artifacts/nohup_chris_f1.log 2>&1 &

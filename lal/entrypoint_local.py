@@ -144,6 +144,16 @@ def main(composer: Composer, state: State) -> None:
     if composer.shared.tags is None:
         composer.shared.tags = [composer.shared.task]
 
+    composer.shared.output_dir = composer.shared.output_dir or str(
+        Path(composer.shared.target_artifacts_dir) / f"f{composer.shared.fold}_output_v{state.timestamp}"
+    )
+    composer.shared.logging_dir = composer.shared.logging_dir or str(
+        Path(composer.shared.target_artifacts_dir)
+        / composer.shared.name
+        / f"f{composer.shared.fold}_logs_v{state.timestamp}"
+    )
+    Path(composer.shared.output_dir).mkdir(parents=True, exist_ok=True)
+
     if ALLOW_WANDB and not IS_DEBUG:
         logger.info("Setting up wandb.")
         run = setup_wandb(
@@ -193,8 +203,9 @@ def main(composer: Composer, state: State) -> None:
         stratify_by=composer.shared.stratify_by,
         fold_column=composer.shared.fold_column,
     )
-    df.to_csv(f"{str(composer.shared.output_dir)}/train_df_fold_{composer.shared.fold}.csv", index=False)
     pprint(df.groupby(["fold", "label"]).size())
+    df.to_csv(f"{str(composer.shared.output_dir)}/train_df_fold_{composer.shared.fold}.csv", index=False)
+
 
     # load data based on job type, whether to use external data, or pretrain etc
     train_df, valid_df = load_data(
@@ -471,15 +482,6 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.logging_steps = composer.shared.logging_steps or (total_train_steps // 32)
         composer.shared.eval_steps = composer.shared.eval_steps or (total_train_steps // 32)
         composer.shared.save_steps = composer.shared.save_steps or composer.shared.eval_steps
-
-    composer.shared.output_dir = composer.shared.output_dir or str(
-        Path(composer.shared.target_artifacts_dir) / f"f{composer.shared.fold}_output_v{state.timestamp}"
-    )
-    composer.shared.logging_dir = composer.shared.logging_dir or str(
-        Path(composer.shared.target_artifacts_dir)
-        / composer.shared.name
-        / f"f{composer.shared.fold}_logs_v{state.timestamp}"
-    )
 
     if composer.shared.enable_mixed_precision:
         composer.shared.fp16 = torch.cuda.is_available() and not torch.cuda.is_bf16_supported()
