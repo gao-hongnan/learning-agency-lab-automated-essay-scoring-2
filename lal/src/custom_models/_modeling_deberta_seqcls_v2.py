@@ -108,7 +108,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         output_attentions: bool | None = None,
         output_hidden_states: bool | None = None,
         return_dict: bool | None = None,
-    ) -> Tuple | SequenceClassifierOutput:
+    ) -> Tuple[torch.Tensor, ...] | SequenceClassifierOutput:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,

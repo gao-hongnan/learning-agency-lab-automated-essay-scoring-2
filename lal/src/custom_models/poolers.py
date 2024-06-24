@@ -15,7 +15,7 @@ class ContextPooler(nn.Module):
         self.dropout = StableDropout(config.pooler_dropout)
         self.config = config
 
-    def forward(self, backbone_outputs: BaseModelOutput, _inputs: torch.Tensor | None = None) -> torch.Tensor:
+    def forward(self, backbone_outputs: BaseModelOutput, _input_ids: torch.Tensor | None = None) -> torch.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         last_hidden_state: torch.Tensor = backbone_outputs.last_hidden_state
@@ -33,11 +33,9 @@ class ContextPooler(nn.Module):
 
 def init_attention_pooler(module: nn.Module) -> None:
     if isinstance(module, nn.Linear):
-        torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)
-        # torch.nn.init.xavier_normal_(module.weight)
+        torch.nn.init.normal_(module.weight, mean=0.0, std=0.1) # torch.nn.init.xavier_normal_(module.weight)
         if module.bias is not None:
             module.bias.data.fill_(0.0)
-
 
 class AttentionPooler(nn.Module):
     def __init__(
@@ -46,7 +44,7 @@ class AttentionPooler(nn.Module):
         hidden_size: int,
         pooler_hidden_dim_fc: int,
         pooler_dropout: float,
-    ):
+    ) -> None:
         """Initialize the AttentionPooler layer. Tested with `Deberta` model
         but not limited to it. You may have to change some config names if you
         want to use it for decoder only models like `Mistral`.
@@ -80,20 +78,7 @@ class AttentionPooler(nn.Module):
         self.hidden_size = hidden_size
         self.pooler_hidden_dim_fc = pooler_hidden_dim_fc
         self.pooler_dropout = pooler_dropout
-
         self.dropout = nn.Dropout(self.pooler_dropout)
-
-        # q_transform = np.random.normal(
-        #     loc=0.0, scale=0.1, size=(1, self.hidden_size)
-        # )  # torch.normal(mean=0.0, std=0.1, size=(1, self.hidden_size))
-        # # self.q = nn.Parameter(q_transform).float()
-        # self.q = nn.Parameter(torch.from_numpy(q_transform)).float()
-
-        # w_h_transform = np.random.normal(
-        #     loc=0.0, scale=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc)
-        # )  # torch.normal(mean=0.0, std=0.1, size=(self.hidden_size, self.pooler_hidden_dim_fc))
-        # # self.w_h = nn.Parameter(w_h_transform).float()
-        # self.w_h = nn.Parameter(torch.from_numpy(w_h_transform)).float()
 
         self.q = nn.Linear(self.hidden_size, 1, bias=False)  # weight.shape: (1, hidden_size)
         self.w_h = nn.Linear(
@@ -104,10 +89,10 @@ class AttentionPooler(nn.Module):
         # nn.init.normal_(self.w_h_transform.weight, mean=0.0, std=0.1)
 
     def forward(
-        self, 
-        backbone_outputs: BaseModelOutput, 
-        _inputs: torch.Tensor | None = None,
-        attention_mask: torch.Tensor | None = None
+        self,
+        backbone_outputs: BaseModelOutput,
+        _input_ids: torch.Tensor | None = None,
+        _attention_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Use deberta example:
         See `SequenceClassifierOutput` `hidden_states` shapeis a tuple of all
@@ -137,20 +122,20 @@ class AttentionPooler(nn.Module):
             dim=-1,
         )
         hidden_states = hidden_states.view(-1, self.num_hidden_layers, self.hidden_size)
-        out = self.attention(hidden_states, attention_mask)
+        out = self.attention(hidden_states, _attention_mask)
         out = self.dropout(out)
         return out
 
     def attention(
-        self, 
+        self,
         hidden_states: torch.Tensor,
-        attention_mask: torch.Tensor
+        attention_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         weights_q = self.q.weight  # [1, hidden_size]
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
 
         if attention_mask is not None:
-            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states).min
+            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states.dtype).min # torch.finfo(hidden_states.dtype).min -> almost -inf
             v = v + attention_mask
 
         v = F.softmax(v, dim=-1)
@@ -160,6 +145,7 @@ class AttentionPooler(nn.Module):
         v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
         v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
+
     # def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
     #     # weights_q = self.q.weight # [1, hidden_size]
     #     # v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
@@ -209,7 +195,6 @@ class AttentionPooler(nn.Module):
                 self.classifier = nn.Linear(output_dim, num_labels)
         ```
         """
-
         return self.pooler_hidden_dim_fc
 
 

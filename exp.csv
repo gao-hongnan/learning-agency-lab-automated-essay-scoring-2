@@ -1,2 +1,3 @@
-﻿run name,resampling,effective bs,effective lr,model,pool,oof,lb
-v20240621232200,skf - 7 folds,16,2.00E-05,deberta base,None,0.833704223,0.801
+﻿run name,resampling,effective bs,effective lr,model,task,pool,loss,oof,lb
+v20240621232200,skf-7folds,16,2.00E-05,deberta base,reg,null,mse,0.833704223,0.801
+v20240623204604,skf-7folds,8,1.00E-05,deberta base,reg,attention,mse,,
