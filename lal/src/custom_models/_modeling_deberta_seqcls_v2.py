@@ -128,7 +128,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             return_dict=return_dict,
         )
 
-        pooled_output = self.pooler(backbone_outputs=backbone_outputs, _inputs=input_ids)
+        pooled_output = self.pooler(backbone_outputs=backbone_outputs, _inputs=input_ids, attention_mask=attention_mask)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 
