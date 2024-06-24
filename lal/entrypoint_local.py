@@ -64,7 +64,7 @@ from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2Fo
 from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
-from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression, compute_metrics_for_reg_cls
+from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics

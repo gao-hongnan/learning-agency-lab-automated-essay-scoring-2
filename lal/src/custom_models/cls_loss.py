@@ -3,7 +3,7 @@ from torch import nn
 
 
 class RegLossForClassification(nn.Module):
-    def __init__(self, alpha=0.35):
+    def __init__(self, alpha: float = 0.35) -> None:
         super().__init__()
         self.cross_entropy = nn.CrossEntropyLoss()
         self.softmax = nn.Softmax(dim=1)
@@ -11,7 +11,7 @@ class RegLossForClassification(nn.Module):
 
         self.alpha = alpha
 
-    def forward(self, logits, labels):
+    def forward(self, logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         bs = logits.shape[0]
         ce_loss = self.cross_entropy(logits, labels)
         # batch_size, 6

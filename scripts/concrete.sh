@@ -30,11 +30,17 @@ python -m lal.entrypoint_local \
     shared.criterion=mse \
     shared.pooler_type=attention
 
+# cls-output_v20240624182649-reg_cls_loss-sgkf
+export ALLOW_WANDB=true && \
 export CUDA_VISIBLE_DEVICES=7 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=SINGLE_LABEL_CLASSIFICATION \
     shared.job_type=train \
+    shared.resample_strategy=StratifiedGroupKFold \
+    shared.resample_params.n_splits=7 \
+    shared.resample_params.shuffle=true \
+    shared.resample_params.random_state=20230310 \
     shared.num_labels=6 \
     shared.fold=2 \
     shared.padding_side=right \
@@ -55,13 +61,15 @@ python -m lal.entrypoint_local \
     shared.optim=adamw_torch \
     shared.per_device_train_batch_size=8 \
     shared.per_device_eval_batch_size=8 \
-    shared.report_to=none \
+    shared.report_to=wandb \
     shared.warmup_ratio=0 \
     shared.desired_effective_batch_size=8 \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=reg_cls_loss \
-    shared.pooler_type=null
+    shared.criterion_config.alpha=0.8 \
+    shared.pooler_type=attention
+
 
 # HUBER
 export CUDA_VISIBLE_DEVICES=5,6 && \
