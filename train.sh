@@ -15,7 +15,6 @@ python -m lal.entrypoint_local \
     shared.padding=max_length \
     shared.output_hidden_states=False \
     shared.output_attentions=False \
-    shared.pooler_type=null \
     shared.pretrained_model_name_or_path=microsoft/deberta-v3-base \
     shared.target_artifacts_dir=./artifacts \
     shared.verbose=False \
