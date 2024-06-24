@@ -200,41 +200,56 @@ class AttentionPooler(nn.Module):
         return self.pooler_hidden_dim_fc
 
 
-class MeanPooling(nn.Module):
-    def __init__(self, backbone_config):
-        super(MeanPooling, self).__init__()
-        self.output_dim = backbone_config.hidden_size
+class MeanPooler(nn.Module):
+    def __init__(self, output_dim: int) -> None:
+        super().__init__()
+        self._output_dim = output_dim
 
-    def forward(self, backbone_outputs, attention_mask):
+    def forward(
+        self,
+        backbone_outputs: BaseModelOutput,
+        _input_ids: torch.Tensor | None = None,
+        _attention_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         last_hidden_state = backbone_outputs.last_hidden_state
-
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
+        input_mask_expanded = _attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
         sum_mask = input_mask_expanded.sum(1)
         sum_mask = torch.clamp(sum_mask, min=1e-9)
         mean_embeddings = sum_embeddings / sum_mask
         return mean_embeddings
 
+    @property
+    def output_dim(self) -> int:
+        return self._output_dim
 
-class GemPooling(nn.Module):
-    def __init__(self, backbone_config, pooling_config):
+
+class GemPooler(nn.Module):
+    def __init__(self, p: float, eps: float, output_dim: int) -> None:
         super().__init__()
 
-        self.dim = backbone_config.hidden_size
-        self.eps = pooling_config.eps
-        self.p = Parameter(torch.ones(1) * pooling_config.p)
+        self.eps = eps
+        self.p = nn.Parameter(torch.ones(1) * p)
 
-        self.output_dim = backbone_config.hidden_size
+        self._output_dim = output_dim
 
-    def forward(self, backbone_output, attention_mask):
+    def forward(
+        self,
+        backbone_outputs: BaseModelOutput,
+        _input_ids: torch.Tensor | None = None,
+        _attention_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         last_hidden_state = backbone_outputs.last_hidden_state
 
-        attention_mask_expanded = attention_mask.unsqueeze(-1).expand(x.size())
+        attention_mask_expanded = _attention_mask.unsqueeze(-1).expand(last_hidden_state.size())
         last_hidden_state = torch.sum((last_hidden_state.clamp(min=self.eps) * attention_mask_expanded).pow(self.p), 1)
         ret = last_hidden_state / attention_mask_expanded.sum(1).clip(min=self.eps)
         ret = ret.pow(1 / self.p)
         return ret
 
+    @property
+    def output_dim(self) -> int:
+        return self._output_dim
 
 # no test
 class LatentAttentionPooler(nn.Module):

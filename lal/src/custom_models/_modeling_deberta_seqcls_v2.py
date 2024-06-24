@@ -14,7 +14,7 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
 )
 
 from .cls_loss import RegLossForClassification
-from .poolers import AttentionPooler, ContextPooler
+from .poolers import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
 
 def get_pooler(config: DebertaV2Config) -> nn.Module:
@@ -28,6 +28,15 @@ def get_pooler(config: DebertaV2Config) -> nn.Module:
             hidden_size=config.hidden_size,
             pooler_hidden_dim_fc=getattr(config, "pooler_hidden_dim_fc", config.hidden_size),
             pooler_dropout=config.pooler_dropout,
+        )
+
+    elif config.pooler_type == "mean":
+        return MeanPooler(output_dim=config.hidden_size)
+    elif config.pooler_type == "gem":
+        return GemPooler(
+            p=getattr(config, "gem_p", 3),
+            eps=getattr(config, "gem_eps", 1e-6),
+            output_dim=config.hidden_size,
         )
     else:
         raise ValueError(f"Pooler {config.pooler_type} is not supported.")
@@ -57,8 +66,6 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
 
     if config.criterion == "huber":
         # see intuition: https://www.kaggle.com/code/emiz6413/cv-0-825-lb-0-803-deberta-v3-small-with-huber-loss
-        print(nn.HuberLoss(**config.criterion_config).alpha)
-
         return nn.HuberLoss(**config.criterion_config)
 
     raise ValueError(f"Criterion {config.criterion} is not supported.")
