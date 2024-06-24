@@ -171,34 +171,6 @@ class AttentionPooler(nn.Module):
         v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
 
-    # def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
-    #     # weights_q = self.q.weight # [1, hidden_size]
-    #     # v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
-    #     print("q shape", self.q.shape) # shape: (1, hidden_size)
-    #     print("Initial hidden_states shape:", hidden_states.shape) # shape: (batch_size, num_hidden_layers, hidden_size)
-    #     # Print the shape after transposing
-    #     print("hidden_states transposed shape:", hidden_states.transpose(-2, -1).shape) # shape: (batch_size, hidden_size, num_hidden_layers)
-
-    #     v = torch.matmul(self.q, hidden_states.transpose(-2, -1)).squeeze(1)
-
-    #     print("Shape after applying q and squeezing:", v.shape) # shape: (batch_size, num_hidden_layers)
-    #     v = F.softmax(v, dim=-1)
-    #     print("Shape after softmax:", v.shape) # shape: (batch_size, num_hidden_layers)
-
-    #     # weights_w_h = self.w_h.weight # shape: (hidden_size, pooler_hidden_dim_fc)
-    #     print("Shape of v.unsqueeze(1):", v.unsqueeze(1).shape) # shape: (batch_size, 1, num_hidden_layers)
-    #     print("Shape of hidden_states for context vector computation:", hidden_states.shape) # shape: (batch_size, num_hidden_layers, hidden_size)
-    #     print("Resulting shape after matmul of v.unsqueeze(1) and hidden_states:", torch.matmul(v.unsqueeze(1), hidden_states).shape) # shape: (batch_size, 1, hidden_size)
-
-    #     v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
-    #     print("Shape after transposing v_temp:", v_temp.shape) # shape: (batch_size, hidden_size, 1)
-    #     print("Shape of w_h:", self.w_h.shape) # shape: (hidden_size, pooler_hidden_dim_fc)
-    #     print("Shape of w_h transposed:", self.w_h.transpose(1, 0).shape) # shape: (pooler_hidden_dim_fc, hidden_size)
-    #     print("Shape of matmul of w_h and v_temp:", torch.matmul(self.w_h.transpose(1, 0), v_temp).shape) # shape: (batch_size, pooler_hidden_dim_fc, 1)
-    #     v = torch.matmul(self.w_h.transpose(1, 0), v_temp).squeeze(2)
-    #     print("Final output shape after applying w_h:", v.shape)  # shape: (batch_size, pooler_hidden_dim_fc)
-    #     return v
-
     @property
     def output_dim(self) -> int:
         """You typically need to add this property because models like

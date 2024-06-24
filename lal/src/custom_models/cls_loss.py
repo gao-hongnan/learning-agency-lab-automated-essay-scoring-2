@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class RegLossForClassification(nn.Module):
     def __init__(self, alpha=0.35):
         super().__init__()
