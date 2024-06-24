@@ -468,7 +468,7 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.per_device_eval_batch_size = 2
         composer.shared.num_train_epochs = 1
     else:
-        composer.shared.logging_steps = composer.shared.logging_steps or (total_train_steps // 8)
+        composer.shared.logging_steps = composer.shared.logging_steps or (total_train_steps // 32)
         composer.shared.eval_steps = composer.shared.eval_steps or (total_train_steps // 32)
         composer.shared.save_steps = composer.shared.save_steps or composer.shared.eval_steps
 
