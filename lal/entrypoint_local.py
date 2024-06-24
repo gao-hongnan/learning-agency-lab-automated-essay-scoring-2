@@ -64,7 +64,7 @@ from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2Fo
 from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
-from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
+from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression, compute_metrics_for_reg_cls
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -555,7 +555,10 @@ def main(composer: Composer, state: State) -> None:
     pprint(training_args)
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
-        compute_metrics = compute_metrics_for_classification
+        if composer.shared.criterion == "reg_cls_loss":
+            compute_metrics = compute_metrics_for_reg_cls
+        else:
+            compute_metrics = compute_metrics_for_classification
     elif composer.shared.task == "REGRESSION":
         compute_metrics = compute_metrics_for_regression
     else:
@@ -578,9 +581,6 @@ def main(composer: Composer, state: State) -> None:
             and composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]
         ):
             trainer.add_callback(SaveLoraHeadCallback(model))
-
-        if composer.shared.pooler_type:
-            trainer.add_callback(SaveModelWithPooler(model))
 
         if composer.shared.resume_from_checkpoint:
             logger.warning(
