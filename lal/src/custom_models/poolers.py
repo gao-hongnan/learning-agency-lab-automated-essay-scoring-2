@@ -133,13 +133,23 @@ class AttentionPooler(nn.Module):
         return out
 
     def attention(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
-        weights_q = self.q.weight  # [1, hidden_size]
+        """Notations.
+
+        - B: batch size
+        - L: number of hidden layers
+        - D: hidden size
+        - P: pooler_hidden_dim_fc
+        - T: sequence length
+        """
+        weights_q = self.q.weight  # [1, D]
+        # hidden_states: [B, L, D] | hidden_states.transpose(-2, -1): [B, D, L]
+        # weights_q @ hidden_states.transpose(-2, -1) -> [1, D] @ [B, D, L] -> broadcast -> [B, 1, D] @ [B, D, L] -> [B, 1, L]
+        # v -> v.squeeze(1) -> [B, 1, L] -> [B, L] (this is each hidden layer's attention score)
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
 
         if attention_mask is not None:
-            attention_mask = (1.0 - attention_mask) * torch.finfo(
-                hidden_states.dtype
-            ).min  # torch.finfo(hidden_states.dtype).min -> almost -inf
+            # torch.finfo(hidden_states.dtype).min -> almost -inf
+            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states.dtype).min
             v = v + attention_mask
 
         v = F.softmax(v, dim=-1)

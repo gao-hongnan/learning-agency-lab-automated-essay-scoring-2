@@ -460,9 +460,7 @@ def main(composer: Composer, state: State) -> None:
     )
 
     effective_train_batch_size = (
-        composer.shared.per_device_train_batch_size
-        * composer.shared.gradient_accumulation_steps
-        * world_size
+        composer.shared.per_device_train_batch_size * composer.shared.gradient_accumulation_steps * world_size
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
     total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs

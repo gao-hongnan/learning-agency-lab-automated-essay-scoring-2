@@ -145,6 +145,18 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 
 ## References
 
+### Transformers Representations
+
 -   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
 -   https://www.kaggle.com/code/vad13irt/optimization-approaches-for-transformers
 -   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
+
+### Profiling
+
+-   https://github.com/yqhu/profiler-workshop/blob/c8d4a7c30a61cc7b909d89f88f5fd36b70c55769/hf_training_trainer_prof.py
+
+### Training Repo
+
+-   https://github.com/pytorch/torchtune/blob/main/torchtune/utils/memory.py
+-   https://github.com/meta-llama/llama-recipes/blob/main/src/llama_recipes/utils/train_utils.py
+-   https://github.com/OpenAccess-AI-Collective/axolotl/tree/main?tab=readme-ov-file#debugging-axolotl

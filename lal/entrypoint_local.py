@@ -65,7 +65,6 @@ from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression
-from .src.models import DebertaV2WithAttentionPooler
 from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics

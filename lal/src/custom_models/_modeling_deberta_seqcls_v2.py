@@ -87,7 +87,6 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def get_input_embeddings(self) -> nn.Embedding:
         return self.deberta.get_input_embeddings()  # type: ignore[no-any-return]
 
@@ -128,7 +127,9 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             return_dict=return_dict,
         )
 
-        pooled_output = self.pooler(backbone_outputs=backbone_outputs, _input_ids=input_ids, _attention_mask=attention_mask)
+        pooled_output = self.pooler(
+            backbone_outputs=backbone_outputs, _input_ids=input_ids, _attention_mask=attention_mask
+        )
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 
