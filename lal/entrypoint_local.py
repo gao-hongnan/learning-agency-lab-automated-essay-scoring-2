@@ -61,7 +61,6 @@ from .conf.config import (
 )
 from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
 from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
-from .src.custom_models.deberta_oll import DebertaV2OLL
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression

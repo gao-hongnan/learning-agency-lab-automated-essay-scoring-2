@@ -33,9 +33,16 @@ def get_pooler(config: DebertaV2Config) -> nn.Module:
     elif config.pooler_type == "mean":
         return MeanPooler(output_dim=config.hidden_size)
     elif config.pooler_type == "gem":
+        pooler_config = getattr(config, "pooler_config", {})
+        from rich.pretty import pprint
+        pprint(GemPooler(
+            p=pooler_config.get("p", 3),
+            eps=pooler_config.get("eps", 1e-6),
+            output_dim=config.hidden_size,
+        ))
         return GemPooler(
-            p=getattr(config, "gem_p", 3),
-            eps=getattr(config, "gem_eps", 1e-6),
+            p=pooler_config.get("p", 3),
+            eps=pooler_config.get("eps", 1e-6),
             output_dim=config.hidden_size,
         )
     else:
