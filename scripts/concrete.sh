@@ -30,11 +30,11 @@ python -m lal.entrypoint_local \
     shared.criterion=mse \
     shared.pooler_type=attention
 
-export CUDA_VISIBLE_DEVICES=0 && \
+export CUDA_VISIBLE_DEVICES=7 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=SINGLE_LABEL_CLASSIFICATION \
-    shared.job_type=debug \
+    shared.job_type=train \
     shared.num_labels=6 \
     shared.fold=2 \
     shared.padding_side=right \

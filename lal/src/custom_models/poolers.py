@@ -140,23 +140,34 @@ class AttentionPooler(nn.Module):
         - D: hidden size
         - P: pooler_hidden_dim_fc
         - T: sequence length
+
+        Note the `hidden_states` shape is `[B, L, D]` which is the CLS token
+        hidden states for each layer. So we do not need to care about if the
+        attention mask is present or not.
+
+        他们这个pooling 就是 每个layer 和每个layer 搞下 看哪个layer softmax 最好
         """
         weights_q = self.q.weight  # [1, D]
         # hidden_states: [B, L, D] | hidden_states.transpose(-2, -1): [B, D, L]
         # weights_q @ hidden_states.transpose(-2, -1) -> [1, D] @ [B, D, L] -> broadcast -> [B, 1, D] @ [B, D, L] -> [B, 1, L]
         # v -> v.squeeze(1) -> [B, 1, L] -> [B, L] (this is each hidden layer's attention score)
+        # we are treating hidden layers like a sequence of tokens and we are trying to get the attention score for each hidden layer
         v = torch.matmul(weights_q, hidden_states.transpose(-2, -1)).squeeze(1)
 
-        if attention_mask is not None:
-            # torch.finfo(hidden_states.dtype).min -> almost -inf
-            attention_mask = (1.0 - attention_mask) * torch.finfo(hidden_states.dtype).min
-            v = v + attention_mask
-
+        # v: [B, L] -> F.softmax(v, dim=-1) -> [B, L] now softmaxed the attention scores to get the weights means which hidden layer to focus on
         v = F.softmax(v, dim=-1)
 
-        weights_w_h = self.w_h.weight  # shape: (pooler_hidden_dim_fc, hidden_size)
+        # weights_w_h = self.w_h.weight  # [P, D]
+        weights_w_h = self.w_h.weight
 
+        # v.unsqueeze(1): [B, 1, L] | hidden_states: [B, L, D]
+        # v.unsqueeze(1) @ hidden_states -> [B, 1, L] @ [B, L, D] -> [B, 1, D]
+        # v_temp: [B, 1, D] -> v_temp.transpose(-2, -1) -> [B, D, 1]
+        # weighted sum of hidden states based on the attention scores
         v_temp = torch.matmul(v.unsqueeze(1), hidden_states).transpose(-2, -1)
+        # finally we are getting the context vector by multiplying the weighted sum of hidden states with the weights
+        # weights_w_h @ v_temp -> [P, D] @ [B, D, 1] -> [B, P, 1] -> squeeze(2) -> [B, P]
+        # means the final cls token representation
         v = torch.matmul(weights_w_h, v_temp).squeeze(2)
         return v
 
