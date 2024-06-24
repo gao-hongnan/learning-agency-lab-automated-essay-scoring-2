@@ -87,7 +87,7 @@ shared:
   criterion: mse # CHANGE
   criterion_config: {}
 
-  pretrained_model_name_or_path: "microsoft/deberta-v3-base"
+  pretrained_model_name_or_path: "microsoft/deberta-v3-large"
   load_backbone_only: false
   cache_dir: "/root/.cache/huggingface"
   target_artifacts_dir: "/artifacts"
@@ -157,7 +157,6 @@ shared:
   warmup_ratio: 0 # CHANGE
   warmup_steps: 0
   weight_decay: 0.01
-
 
   base_learning_rate: 0.00001 # CHANGE
   desired_effective_batch_size: 8 # CHANGE
