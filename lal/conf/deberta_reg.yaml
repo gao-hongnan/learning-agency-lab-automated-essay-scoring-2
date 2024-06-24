@@ -30,16 +30,16 @@ shared:
   num_labels: 1 # CHANGE
 
   # split/resample strategy
-  # resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
-  # resample_params:
-  #   n_splits: 7 # CHANGE
-  #   shuffle: true
-  #   random_state: 20230310
-  resample_strategy: "StratifiedGroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
+  resample_strategy: "StratifiedKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
   resample_params:
     n_splits: 7 # CHANGE
     shuffle: true
-    random_state: 42
+    random_state: 20230310
+  # resample_strategy: "StratifiedGroupKFold" # "StratifiedKFold" "StratifiedGroupKFold" # CHANGE
+  # resample_params:
+  #   n_splits: 7 # CHANGE
+  #   shuffle: true
+  #   random_state: 42
   group_by: "prompt_name" # "prompt_name" # CHANGE
   stratify_by: "score" # null # CHANGE
   fold_column: "fold"
