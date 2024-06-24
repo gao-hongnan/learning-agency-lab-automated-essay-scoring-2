@@ -8,6 +8,7 @@ artifacts
 .DS_Store
 *output*
 tmp**.*
+weights*
 
 # C extensions
 *.so

@@ -3,11 +3,12 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 from torch import nn
+from transformers import AutoModel
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config, StableDropout
+
 from .modeling_latent_attention import LatentAttentionConfig, LatentAttentionModel
-from transformers import AutoModel
 
 
 class ContextPooler(nn.Module):
@@ -43,6 +44,7 @@ def init_attention_pooler(module: nn.Module) -> None:
         torch.nn.init.normal_(module.weight, mean=0.0, std=0.1)  # torch.nn.init.xavier_normal_(module.weight)
         if module.bias is not None:
             module.bias.data.fill_(0.0)
+
 
 # todo change constructor to config @gaohn
 # add a backbone type to slice the CLS (0, encoder) or last token (-1, decoder)  @gaohn
@@ -131,11 +133,11 @@ class AttentionPooler(nn.Module):
             dim=-1,
         )
         hidden_states = hidden_states.view(-1, self.num_hidden_layers, self.hidden_size)
-        out = self.attention(hidden_states, _attention_mask)
+        out = self.attention(hidden_states)
         out = self.dropout(out)
         return out
 
-    def attention(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+    def attention(self, hidden_states: torch.Tensor) -> torch.Tensor:
         """Notations.
 
         - B: batch size
@@ -198,15 +200,6 @@ class AttentionPooler(nn.Module):
         return self.pooler_hidden_dim_fc
 
 
-
-# def forward(
-#         self,
-#         backbone_outputs: BaseModelOutput,
-#         _input_ids: torch.Tensor | None = None,
-#         _attention_mask: torch.Tensor | None = None,
-#     ) -> torch.Tensor:
-
-    
 class MeanPooling(nn.Module):
     def __init__(self, backbone_config):
         super(MeanPooling, self).__init__()
@@ -214,10 +207,8 @@ class MeanPooling(nn.Module):
 
     def forward(self, backbone_outputs, attention_mask):
         last_hidden_state = backbone_outputs.last_hidden_state
-        
-        input_mask_expanded = (
-            attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-        )
+
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
         sum_mask = input_mask_expanded.sum(1)
         sum_mask = torch.clamp(sum_mask, min=1e-9)
@@ -237,7 +228,6 @@ class GemPooling(nn.Module):
 
     def forward(self, backbone_output, attention_mask):
         last_hidden_state = backbone_outputs.last_hidden_state
-        
 
         attention_mask_expanded = attention_mask.unsqueeze(-1).expand(x.size())
         last_hidden_state = torch.sum((last_hidden_state.clamp(min=self.eps) * attention_mask_expanded).pow(self.p), 1)
@@ -245,13 +235,13 @@ class GemPooling(nn.Module):
         ret = ret.pow(1 / self.p)
         return ret
 
+
 # no test
 class LatentAttentionPooler(nn.Module):
     def __init__(self, backbone_config, pooling_config):
-        super().__init__()            
+        super().__init__()
         self.latent_attention_model = LatentAttentionModel(pooling_config)
-        
-        
+
     def forward(self, backbone_output, attention_mask):
         last_hidden_state = backbone_output.last_hidden_state
         ## latent attention layer
@@ -260,4 +250,3 @@ class LatentAttentionPooler(nn.Module):
             attention_mask,
         )
         return hidden
-        
