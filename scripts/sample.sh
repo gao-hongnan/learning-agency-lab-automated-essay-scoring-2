@@ -12,7 +12,7 @@
 
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
-    shared.taks=REGRESSION \
+    shared.task=REGRESSION \
     shared.job_type=debug \
     shared.num_labels=1 \
     shared.fold=2 \
@@ -45,7 +45,7 @@ python -m lal.entrypoint_local \
 
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
-    shared.taks=REGRESSION \
+    shared.task=REGRESSION \
     shared.job_type=debug \
     shared.num_labels=1 \
     shared.fold=2 \
@@ -79,7 +79,7 @@ python -m lal.entrypoint_local \
 # SAMPLE ATTENTION POOLER
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
-    shared.taks=REGRESSION \
+    shared.task=REGRESSION \
     shared.job_type=debug \
     shared.num_labels=1 \
     shared.fold=2 \
@@ -113,7 +113,7 @@ python -m lal.entrypoint_local \
 
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
-    shared.taks=REGRESSION \
+    shared.task=REGRESSION \
     shared.job_type=debug \
     shared.num_labels=1 \
     shared.fold=2 \
@@ -146,7 +146,7 @@ python -m lal.entrypoint_local \
 # AND StratifiedGroupKFold
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
-    shared.taks=REGRESSION \
+    shared.task=REGRESSION \
     shared.job_type=debug \
     shared.resample_strategy=StratifiedGroupKFold \
     shared.resample_params.n_splits=7 \
