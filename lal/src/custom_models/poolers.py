@@ -6,7 +6,8 @@ from torch import nn
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config, StableDropout
-
+from .modeling_latent_attention import LatentAttentionConfig, LatentAttentionModel
+from transformers import AutoModel
 
 class ContextPooler(nn.Module):
     def __init__(self, config: DebertaV2Config) -> None:
@@ -243,4 +244,20 @@ class GemPooling(nn.Module):
         ret = ret.pow(1 / self.p)
         return ret
 
-
+# no test
+class LatentAttentionPooler(nn.Module):
+    def __init__(self, backbone_config, pooling_config):
+        super().__init__()
+        pooling_config.output_normalize = False
+        self.latent_attention_model = AutoModel.from_config(pooling_config)
+        
+        
+    def forward(self, backbone_output, attention_mask):
+        last_hidden_state = backbone_outputs.last_hidden_state
+        ## latent attention layer
+        hidden = self.latent_attention_model(
+            last_hidden_state,
+            attention_mask,
+        )
+        return hidden
+        
