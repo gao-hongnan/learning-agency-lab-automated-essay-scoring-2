@@ -1,10 +1,9 @@
 import torch
 from torch import nn
 
-
 class RegLossForClassification(nn.Module):
-    def __init__(self, alpha=0.5):
-        super(RegLossForClassification, self).__init__()
+    def __init__(self, alpha=0.35):
+        super().__init__()
         self.cross_entropy = nn.CrossEntropyLoss()
         self.softmax = nn.Softmax(dim=1)
         self.mse = nn.MSELoss()
@@ -21,6 +20,6 @@ class RegLossForClassification(nn.Module):
         labels_float = labels.to(probs.dtype).to(probs.device)
         mse_loss = self.mse(reg_scores, labels_float)
 
-        loss = self.alpha * ce_loss / ce_loss.detach() + (1 - self.alpha) * mse_loss / mse_loss.detach()
+        loss = self.alpha * ce_loss + (1 - self.alpha) * mse_loss
 
         return loss
