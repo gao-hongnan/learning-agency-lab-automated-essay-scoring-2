@@ -42,7 +42,7 @@ def init_attention_pooler(module: nn.Module) -> None:
         if module.bias is not None:
             module.bias.data.fill_(0.0)
 
-
+# todo change constructor to config @gaohn
 class AttentionPooler(nn.Module):
     def __init__(
         self,
@@ -195,6 +195,33 @@ class AttentionPooler(nn.Module):
         return self.pooler_hidden_dim_fc
 
 
+
+# def forward(
+#         self,
+#         backbone_outputs: BaseModelOutput,
+#         _input_ids: torch.Tensor | None = None,
+#         _attention_mask: torch.Tensor | None = None,
+#     ) -> torch.Tensor:
+
+    
+class MeanPooling(nn.Module):
+    def __init__(self, backbone_config):
+        super(MeanPooling, self).__init__()
+        self.output_dim = backbone_config.hidden_size
+
+    def forward(self, backbone_outputs, attention_mask):
+        last_hidden_state = backbone_outputs.last_hidden_state
+        
+        input_mask_expanded = (
+            attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
+        )
+        sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
+        sum_mask = input_mask_expanded.sum(1)
+        sum_mask = torch.clamp(sum_mask, min=1e-9)
+        mean_embeddings = sum_embeddings / sum_mask
+        return mean_embeddings
+
+
 # class GemPooling(nn.Module):
 #     def __init__(self, backbone_config, pooling_config):
 #         super().__init__()
@@ -216,20 +243,3 @@ class AttentionPooler(nn.Module):
 #         return ret
 
 
-# class MeanPooling(nn.Module):
-#     def __init__(self, backbone_config, pooling_config):
-#         super(MeanPooling, self).__init__()
-#         self.output_dim = backbone_config.hidden_size
-
-#     def forward(self, inputs, backbone_outputs):
-#         attention_mask = get_attention_mask(inputs)
-#         last_hidden_state = get_last_hidden_state(backbone_outputs)
-
-#         input_mask_expanded = (
-#             attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-#         )
-#         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
-#         sum_mask = input_mask_expanded.sum(1)
-#         sum_mask = torch.clamp(sum_mask, min=1e-9)
-#         mean_embeddings = sum_embeddings / sum_mask
-#         return mean_embeddings
