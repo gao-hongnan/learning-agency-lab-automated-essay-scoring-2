@@ -3,12 +3,11 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 from torch import nn
-from transformers import AutoModel
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config, StableDropout
 
-from .modeling_latent_attention import LatentAttentionConfig, LatentAttentionModel
+from .modeling_latent_attention import LatentAttentionModel
 
 
 class ContextPooler(nn.Module):

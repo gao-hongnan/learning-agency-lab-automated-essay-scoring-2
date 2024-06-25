@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import types
 from pathlib import Path
 from typing import Any
 
@@ -34,8 +33,6 @@ from transformers import (
     AutoTokenizer,
     DataCollatorForSeq2Seq,
     DataCollatorWithPadding,
-    DebertaV2ForSequenceClassification,
-    DebertaV2Tokenizer,
     PretrainedConfig,
     Trainer,
     TrainingArguments,
@@ -46,25 +43,12 @@ from wandb.sdk.wandb_run import Run
 
 import wandb
 
-from .conf.config import (
-    A10_24_GPU,
-    A100_40_GPU,
-    ALLOW_WANDB,
-    H100_80_GPU,
-    IMAGE,
-    IN_MODAL,
-    VOLUME,
-    Composer,
-    Constants,
-    Shared,
-    app,
-)
-from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
+from .conf.config import ALLOW_WANDB, Composer, Shared
+from .src.callbacks import SaveLoraHeadCallback
 from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
-from .src.patches import deberta_v2_seq_cls_forward
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
 from .src.utils import dry_run, jsonify, load_model
@@ -205,7 +189,6 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(df.groupby(["fold", "label"]).size())
     df.to_csv(f"{str(composer.shared.output_dir)}/train_df_fold_{composer.shared.fold}.csv", index=False)
-
 
     # load data based on job type, whether to use external data, or pretrain etc
     train_df, valid_df = load_data(
@@ -681,10 +664,9 @@ def main(composer: Composer, state: State) -> None:
     print(f"Validation QWK Score = {qwk}")
 
     pprint(composer)
-    import json
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
-        f.write(json.dumps(composer.model_dump_json(exclude="shared.torch_dtype"), indent=4))
+        f.write(json.dumps(composer.model_dump_json(), indent=4))
 
 
 if __name__ == "__main__":

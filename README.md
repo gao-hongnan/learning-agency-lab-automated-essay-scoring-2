@@ -55,11 +55,6 @@ also make sure the wandb API key is set. Then run with `ALLOW_WANDB` set to
 export ALLOW_WANDB=True
 ```
 
-## Attention Pooling Patch
-
--   918d0f306a5c3e8c9ef0db1752c5e5116adbcfdb
-    -   https://wandb.ai/gaohn-teaching-mlops/learning-agency-lab-automated-essay-scoring-2/runs/llem1kv0?nw=nwuserhongnangao
-
 ## [Training/Inference] Mixed Precision
 
 On a related topic, if I load a model in float32 and subsequently train it using
@@ -109,6 +104,20 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 -   https://github.com/OpenAccess-AI-Collective/axolotl/issues/1031
 -   https://github.com/huggingface/transformers/issues/23165
 -   https://github.com/huggingface/peft/issues/341#issuecomment-1884911753
+
+## [LORA] LORA Classifier Head Not Saved Properly
+
+-   https://github.com/huggingface/peft/issues/503
+-   https://github.com/huggingface/peft/issues/602
+-   https://github.com/huggingface/peft/issues/577
+-   https://github.com/huggingface/peft/pull/755
+-   https://github.com/huggingface/transformers/issues/26160
+-   https://github.com/huggingface/peft/issues/1070
+-   https://discuss.huggingface.co/t/llama-2-sequence-classification-much-lower-accuracy-on-inference-from-checkpoint-compared-to-model/54910/3
+-   https://colab.research.google.com/drive/1JPevLSsOq6DWr2tKw7reEDcgwmYhbEfp?usp=sharing#scrollTo=6Qutrt6nkVZm
+-   https://colab.research.google.com/drive/1mGpLQk8VMFfh_jcMGPaTfygGOdqlUUTs?usp=sharing#scrollTo=U68c5mRSi7OU
+-   https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_classification.py
+-   https://huggingface.co/docs/peft/main/en/task_guides/semantic_segmentation_lora
 
 # Tricks and Strategies
 

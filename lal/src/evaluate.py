@@ -1,8 +1,6 @@
-import torch
 from rich.pretty import pprint
-from transformers import AutoModelForSequenceClassification
 
-from .models import AttentionPooler, DebertaV2WithAttentionPooler
+from .models import DebertaV2WithAttentionPooler
 
 base_model = DebertaV2WithAttentionPooler.from_pretrained(
     pretrained_model_name_or_path="/Users/gaohn/gaohn/learning-agency-lab-automated-essay-scoring-2/artifacts/f2_output_v20240622130318/checkpoint-64"
