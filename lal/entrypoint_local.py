@@ -45,10 +45,10 @@ import wandb
 
 from .conf.config import ALLOW_WANDB, Composer, Shared
 from .src.callbacks import SaveLoraHeadCallback
-from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
+from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
 from .src.utils import dry_run, jsonify, load_model
