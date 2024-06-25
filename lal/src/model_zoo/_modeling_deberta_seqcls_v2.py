@@ -13,8 +13,8 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
     StableDropout,
 )
 
-from .loss import RegLossForClassification
-from .poolers import AttentionPooler, ContextPooler, GemPooler, MeanPooler
+from .criterion import RegLossForClassification
+from .pooling import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
 
 def get_pooler(config: DebertaV2Config) -> nn.Module:

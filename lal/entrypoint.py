@@ -44,7 +44,7 @@ import wandb
 
 from .conf.config import ALLOW_WANDB, H100_80_GPU, IMAGE, VOLUME, Composer, Constants, Shared, app
 from .src.callbacks import SaveLoraHeadCallback, SaveModelWithPooler
-from .src.custom_models._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
+from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_regression

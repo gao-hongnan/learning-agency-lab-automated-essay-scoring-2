@@ -8,4 +8,4 @@ v20240624231703,skf-5,8,1.00E-05,linear,deberta small,reg,null,mse,no,1024/4096,
 v20240625074424,skf-5,8,1.00E-05,linear,deberta small,reg,attention,mse,no,1024/1024,0.823134664,0.8,,,,a8b9122bdf1e8b046f5d75d0cc70970718ec0806,https://www.kaggle.com/code/reighns/v20240625074424-all-folds-inference?scriptVersionId=185290526
 v20240625094959,skf-5,8,1.00E-05,linear,deberta small,reg,null,huber,no,1024/1024,,,,,,a8b9122bdf1e8b046f5d75d0cc70970718ec0806,
 v20240625102856,skf-5,8,1.00E-05,linear,deberta small,reg,mean,mse,no,1024/1024,,,,,,,
-,skf-5,8,1.00E-05,linear,deberta small,reg,gem,mse,no,1024/1024,,,,,,,
+v20240625110020,skf-5,8,1.00E-05,linear,deberta small,reg,gem,mse,no,1024/1024,,,,,,,

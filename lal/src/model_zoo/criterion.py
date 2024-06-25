@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from transformers.modeling_outputs import SequenceClassifierOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Model, DebertaV2PreTrainedModel, StableDropout
 
-from .poolers import ContextPooler
+from .pooling import ContextPooler
 
 
 class RegLossForClassification(nn.Module):
