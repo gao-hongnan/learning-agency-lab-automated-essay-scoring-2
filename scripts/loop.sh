@@ -16,7 +16,7 @@ do
       lal/conf/deberta_reg.yaml \
       shared.task=SINGLE_LABEL_CLASSIFICATION \
       shared.job_type=train_with_external \
-      shared.num_labels=1 \
+      shared.num_labels=6 \
       shared.resample_strategy=StratifiedGroupKFold \
       shared.resample_params.n_splits=7 \
       shared.resample_params.shuffle=true \
