@@ -20,7 +20,6 @@ from typing import Any
 logger = get_logger(__name__, level=logging.DEBUG)
 
 def _init_weights(module: nn.Module, **kwargs: Any) -> None:
-    print(121231233131)
     # std = self.config.initializer_range
     init_weight = kwargs.get("init_weight", "normal")
 
