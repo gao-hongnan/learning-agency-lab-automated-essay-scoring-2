@@ -30,7 +30,7 @@ do
       shared.output_hidden_states=True \
       shared.output_attentions=False \
       shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
-      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp2/$fold \
+      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp3-mean \
       shared.verbose=False \
       shared.adam_epsilon=1e-8 \
       shared.data_seed=null \
@@ -54,8 +54,8 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.default=False \
-      shared.criterion=huber \
-      shared.pooler_type=null" > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
+      shared.criterion=mse \
+      shared.pooler_type=mean" > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
 
 wait
