@@ -20,7 +20,7 @@ do
       shared.resample_strategy=StratifiedKFold \
       shared.resample_params.n_splits=5 \
       shared.resample_params.shuffle=true \
-      shared.resample_params.random_state=1992090420230310 \
+      shared.resample_params.random_state=42 \
       shared.fold=$fold \
       shared.padding_side=right \
       shared.max_length=1024 \
