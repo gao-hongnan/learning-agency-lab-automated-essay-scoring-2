@@ -14,8 +14,8 @@ do
   export CUDA_VISIBLE_DEVICES=$GPU_ID && \
   python -m lal.entrypoint_local \
       lal/conf/deberta_reg.yaml \
-      shared.task=REGRESSION \
-      shared.job_type=train \
+      shared.task=SINGLE_LABEL_CLASSIFICATION \
+      shared.job_type=train_with_external \
       shared.num_labels=1 \
       shared.resample_strategy=StratifiedGroupKFold \
       shared.resample_params.n_splits=7 \
@@ -23,14 +23,14 @@ do
       shared.resample_params.random_state=20230310 \
       shared.fold=$fold \
       shared.padding_side=right \
-      shared.max_length=1024 \
+      shared.max_length=1536 \
       shared.add_special_tokens=True \
       shared.padding=False \
       shared.truncation=True \
       shared.output_hidden_states=True \
       shared.output_attentions=False \
       shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
-      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp5-sgkf \
+      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp6-sgkf \
       shared.verbose=False \
       shared.adam_epsilon=1e-8 \
       shared.data_seed=null \
@@ -54,7 +54,7 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.default=False \
-      shared.criterion=mse \
+      shared.criterion=cross_entropy \
       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
 
