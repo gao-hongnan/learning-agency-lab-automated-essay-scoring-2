@@ -42,7 +42,7 @@ do
       shared.lr_scheduler_type=linear \
       shared.max_grad_norm=1.0 \
       shared.metric_for_best_model=eval_qwk \
-      shared.num_train_epochs=5 \
+      shared.num_train_epochs=4 \
       shared.optim=adamw_torch \
       shared.per_device_train_batch_size=8 \
       shared.per_device_eval_batch_size=8 \
@@ -55,7 +55,9 @@ do
       shared.enable_mixed_precision=True \
       shared.default=False \
       shared.criterion=mse \
-      shared.pooler_type=mean" > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
+      shared.pooler_type=gem \
+      shared.pooler_config.gem_p=3 \
+      shared.pooler_config.gem_eps=1e-6 " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
 
 wait
