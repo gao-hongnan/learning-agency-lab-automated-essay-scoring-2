@@ -234,6 +234,7 @@ class Shared(BaseModel):
     use_lora: bool = True
     num_layers_to_remove: int | None = None
     reinitialize_n_layers: int = 0
+    enable_gradient_checkpointing: bool = False
 
     # freeze
     num_layers_to_freeze: int | None = None

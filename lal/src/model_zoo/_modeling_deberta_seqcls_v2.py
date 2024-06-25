@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Tuple
 
 import torch
@@ -12,8 +13,74 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
     StableDropout,
 )
 
+from ..logger import get_logger
 from .factory import get_loss, get_pooler
+from typing import Any
 
+logger = get_logger(__name__, level=logging.DEBUG)
+
+def _init_weights(module: nn.Module, **kwargs: Any) -> None:
+    print(121231233131)
+    # std = self.config.initializer_range
+    init_weight = kwargs.get("init_weight", "normal")
+
+    if isinstance(module, nn.Linear):
+        if init_weight == "normal":
+            module.weight.data.normal_(mean=kwargs.get("mean", 0.0), std=kwargs.get("std", 0.02))
+        elif init_weight == "xavier_uniform":
+            module.weight.data = nn.init.xavier_uniform_(module.weight.data, gain=kwargs.get("gain", 1.0))
+        elif init_weight == "xavier_normal":
+            module.weight.data = nn.init.xavier_normal_(module.weight.data, gain=kwargs.get("gain", 1.0))
+        elif init_weight == "kaiming_uniform":
+            module.weight.data = nn.init.kaiming_uniform_(
+                module.weight.data,
+                kwargs.get("a", 0),
+                kwargs.get("mode", "fan_in"),
+                kwargs.get("nonlinearity", "leaky_relu"),
+            )
+        elif init_weight == "kaiming_normal":
+            module.weight.data = nn.init.kaiming_normal_(
+                module.weight.data,
+                kwargs.get("a", 0),
+                kwargs.get("mode", "fan_in"),
+                kwargs.get("nonlinearity", "leaky_relu"),
+            )
+        elif init_weight == "orthogonal":
+            module.weight.data = nn.init.orthogonal_(module.weight.data, kwargs.get("gain", 1.0))
+
+        if module.bias is not None:
+            module.bias.data.zero_()
+
+    elif isinstance(module, nn.Embedding):
+        if init_weight == "normal":
+            module.weight.data.normal_(mean=kwargs.get("mean", 0.0), std=kwargs.get("std", 0.02))
+        elif init_weight == "xavier_uniform":
+            module.weight.data = nn.init.xavier_uniform_(module.weight.data, gain=kwargs.get("gain", 1.0))
+        elif init_weight == "xavier_normal":
+            module.weight.data = nn.init.xavier_normal_(module.weight.data, gain=kwargs.get("gain", 1.0))
+        elif init_weight == "kaiming_uniform":
+            module.weight.data = nn.init.kaiming_uniform_(
+                module.weight.data,
+                kwargs.get("a", 0),
+                kwargs.get("mode", "fan_in"),
+                kwargs.get("nonlinearity", "leaky_relu"),
+            )
+        elif init_weight == "kaiming_normal":
+            module.weight.data = nn.init.kaiming_normal_(
+                module.weight.data,
+                kwargs.get("a", 0),
+                kwargs.get("mode", "fan_in"),
+                kwargs.get("nonlinearity", "leaky_relu"),
+            )
+        elif init_weight == "orthogonal":
+            module.weight.data = nn.init.orthogonal_(module.weight.data, kwargs.get("gain", 1.0))
+
+        if module.padding_idx is not None:
+            module.weight.data[module.padding_idx].zero_()
+
+    elif isinstance(module, nn.LayerNorm):
+        module.bias.data.zero_()
+        module.weight.data.fill_(1.0)
 
 class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     """We can overload deberta's config with `criterion` and `pooler_type` along
@@ -27,18 +94,53 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         num_labels = getattr(config, "num_labels", 2)
         self.num_labels = num_labels
 
-        self.deberta = DebertaV2Model(config)
+        # 1. LOAD BACKBONE
+        self.deberta = DebertaV2Model(config)  # NOTE: alias=self.backbone
 
+        if self.config.enable_gradient_checkpointing:
+            logger.info("Enabling gradient checkpointing.")
+            self.deberta.gradient_checkpointing_enable()
+
+        #         if self.composer.shared.freeze_embeddings:
+        #             logger.info("freezing embeddings.")
+        #             embedding_module = self.backbone.embed_tokens
+        #             self.freeze_layers(embedding_module)
+
+        #         if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
+        #             logger.info(
+        #                 "freezing the first %s layers.",
+        #                 self.composer.shared.num_layers_to_freeze,
+        #             )
+        #             # Here the first layers are frozen: only remaining last layers will be trained
+        #             for layer in self.backbone.layers[
+        #                 : self.composer.shared.num_layers_to_freeze
+        #             ]:
+        #                 self.freeze_layers(layer)
+
+        #         if self.composer.shared.reinitialize_n_layers > 0:
+        #             for module in self.backbone.layers[
+        #                 -self.composer.shared.reinitialize_n_layers :
+        #             ]:
+        #                 self._init_weights(module)
+
+        # 2. LOAD POOLER
         self.pooler = get_pooler(config)  # Factory method to get pooler
         output_dim = self.pooler.output_dim
 
-        self.classifier = nn.Linear(output_dim, num_labels)
+        # 3. LOAD REGRESSOR/CLASSIFIER HEAD
+        self.classifier = nn.Linear(output_dim, num_labels)  # NOTE: alias=self.head
+
         drop_out = getattr(config, "cls_dropout", None)
         drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
         self.dropout = StableDropout(drop_out)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def _init_weights(self, module: nn.Module) -> None:
+        """Initialize the weights."""
+        init_config = getattr(self.config, "init_config", {})
+        _init_weights(module, **init_config)
 
     def get_input_embeddings(self) -> nn.Embedding:
         return self.deberta.get_input_embeddings()  # type: ignore[no-any-return]

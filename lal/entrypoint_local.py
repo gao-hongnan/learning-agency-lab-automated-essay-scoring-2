@@ -259,10 +259,12 @@ def main(composer: Composer, state: State) -> None:
     )
 
     base_model_config.num_labels = composer.shared.num_labels
+    # NOTE: update outside config to deberta's config
     base_model_config.criterion = composer.shared.criterion
     base_model_config.criterion_config = composer.shared.criterion_config
     base_model_config.pooler_type = composer.shared.pooler_type
     base_model_config.pooler_config = composer.shared.pooler_config
+    base_model_config.enable_gradient_checkpointing = composer.shared.enable_gradient_checkpointing
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"
@@ -546,6 +548,7 @@ def main(composer: Composer, state: State) -> None:
         compute_metrics = None
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
+    pprint(model)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -567,6 +570,7 @@ def main(composer: Composer, state: State) -> None:
             logger.warning(
                 "Resuming training from checkpoint. Ensure your `num_train_epochs` is greater than your resumed checkpoint's `num_train_epochs`."
             )
+
         trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)  # if None is no ops
         torch.cuda.empty_cache()
         trainer.save_model(output_dir=composer.shared.output_dir)
@@ -664,8 +668,9 @@ def main(composer: Composer, state: State) -> None:
     state.hf_tokenizer_kwargs = tokenizer.init_kwargs
     state.statistics = statistics
 
-    pprint(composer)
-    pprint(state)
+    # if composer.shared.verbose:
+    #     pprint(composer)
+    #     pprint(state)
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
         composer.shared.torch_dtype = str(composer.shared.torch_dtype)
