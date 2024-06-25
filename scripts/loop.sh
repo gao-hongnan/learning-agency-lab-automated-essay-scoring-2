@@ -30,7 +30,7 @@ do
       shared.output_hidden_states=True \
       shared.output_attentions=False \
       shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
-      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp3-mean \
+      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp4-gem \
       shared.verbose=False \
       shared.adam_epsilon=1e-8 \
       shared.data_seed=null \
