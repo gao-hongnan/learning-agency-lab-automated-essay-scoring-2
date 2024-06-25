@@ -217,6 +217,9 @@ class Shared(BaseModel):
     criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber"] | None = None # ordinal-log-loss, cross-entropy, mse
     criterion_config: dict[str, Any] = {}
 
+    # init config
+    init_config: dict[str, Any] = {}
+
     # ???
     pretrained_model_name_or_path: str = "mistralai/Mistral-7B-Instruct-v0.2"
     load_backbone_only: bool = False
@@ -233,7 +236,7 @@ class Shared(BaseModel):
     inference: bool = False
     use_lora: bool = True
     num_layers_to_remove: int | None = None
-    reinitialize_n_layers: int = 0
+    reinitialize_n_layers_of_backbone: int = 0
     enable_gradient_checkpointing: bool = False
 
     # freeze

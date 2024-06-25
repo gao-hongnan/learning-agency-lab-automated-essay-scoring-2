@@ -222,10 +222,13 @@ python -m lal.entrypoint_local \
     shared.optim=adamw_torch \
     shared.per_device_train_batch_size=8 \
     shared.per_device_eval_batch_size=8 \
-    shared.report_to=wandb \
+    shared.report_to=none \
     shared.warmup_ratio=0 \
     shared.desired_effective_batch_size=8 \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=mse \
-    shared.pooler_type=mean
+    shared.pooler_type=mean \
+    shared.reinitialize_n_layers_of_backbone=0
+
+# Validation QWK Score = 0.1040995444950561

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
+from typing import Any, Tuple
 
 import torch
 from torch import nn
+from rich.pretty import pprint
 from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import (
     DebertaV2Config,
@@ -15,63 +16,75 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
 
 from ..logger import get_logger
 from .factory import get_loss, get_pooler
-from typing import Any
-
+from omnivault.utils.torch_utils.model_utils import get_named_modules
 logger = get_logger(__name__, level=logging.DEBUG)
 
+
 def _init_weights(module: nn.Module, **kwargs: Any) -> None:
+    """Initialize the weights. This is a helper function to initialize the weights
+    of a torch model.
+
+    Parameters
+    ----------
+    module : nn.Module
+        The module to initialize the weights. It can be the model itself, or
+        a sub-module of the model such as nn.Linear, nn.Embedding, nn.LayerNorm.
+    kwargs : Any
+        Additional keyword arguments to pass to the initialization method.
+        This is like a _universal_ way to accept configuration.
+    """
     # std = self.config.initializer_range
-    init_weight = kwargs.get("init_weight", "normal")
+    init_method = kwargs.get("init_method", "normal")
 
     if isinstance(module, nn.Linear):
-        if init_weight == "normal":
+        if init_method == "normal":
             module.weight.data.normal_(mean=kwargs.get("mean", 0.0), std=kwargs.get("std", 0.02))
-        elif init_weight == "xavier_uniform":
+        elif init_method == "xavier_uniform":
             module.weight.data = nn.init.xavier_uniform_(module.weight.data, gain=kwargs.get("gain", 1.0))
-        elif init_weight == "xavier_normal":
+        elif init_method == "xavier_normal":
             module.weight.data = nn.init.xavier_normal_(module.weight.data, gain=kwargs.get("gain", 1.0))
-        elif init_weight == "kaiming_uniform":
+        elif init_method == "kaiming_uniform":
             module.weight.data = nn.init.kaiming_uniform_(
                 module.weight.data,
                 kwargs.get("a", 0),
                 kwargs.get("mode", "fan_in"),
                 kwargs.get("nonlinearity", "leaky_relu"),
             )
-        elif init_weight == "kaiming_normal":
+        elif init_method == "kaiming_normal":
             module.weight.data = nn.init.kaiming_normal_(
                 module.weight.data,
                 kwargs.get("a", 0),
                 kwargs.get("mode", "fan_in"),
                 kwargs.get("nonlinearity", "leaky_relu"),
             )
-        elif init_weight == "orthogonal":
+        elif init_method == "orthogonal":
             module.weight.data = nn.init.orthogonal_(module.weight.data, kwargs.get("gain", 1.0))
 
         if module.bias is not None:
             module.bias.data.zero_()
 
     elif isinstance(module, nn.Embedding):
-        if init_weight == "normal":
+        if init_method == "normal":
             module.weight.data.normal_(mean=kwargs.get("mean", 0.0), std=kwargs.get("std", 0.02))
-        elif init_weight == "xavier_uniform":
+        elif init_method == "xavier_uniform":
             module.weight.data = nn.init.xavier_uniform_(module.weight.data, gain=kwargs.get("gain", 1.0))
-        elif init_weight == "xavier_normal":
+        elif init_method == "xavier_normal":
             module.weight.data = nn.init.xavier_normal_(module.weight.data, gain=kwargs.get("gain", 1.0))
-        elif init_weight == "kaiming_uniform":
+        elif init_method == "kaiming_uniform":
             module.weight.data = nn.init.kaiming_uniform_(
                 module.weight.data,
                 kwargs.get("a", 0),
                 kwargs.get("mode", "fan_in"),
                 kwargs.get("nonlinearity", "leaky_relu"),
             )
-        elif init_weight == "kaiming_normal":
+        elif init_method == "kaiming_normal":
             module.weight.data = nn.init.kaiming_normal_(
                 module.weight.data,
                 kwargs.get("a", 0),
                 kwargs.get("mode", "fan_in"),
                 kwargs.get("nonlinearity", "leaky_relu"),
             )
-        elif init_weight == "orthogonal":
+        elif init_method == "orthogonal":
             module.weight.data = nn.init.orthogonal_(module.weight.data, kwargs.get("gain", 1.0))
 
         if module.padding_idx is not None:
@@ -80,6 +93,7 @@ def _init_weights(module: nn.Module, **kwargs: Any) -> None:
     elif isinstance(module, nn.LayerNorm):
         module.bias.data.zero_()
         module.weight.data.fill_(1.0)
+
 
 class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     """We can overload deberta's config with `criterion` and `pooler_type` along
@@ -116,11 +130,19 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         #             ]:
         #                 self.freeze_layers(layer)
 
-        #         if self.composer.shared.reinitialize_n_layers > 0:
-        #             for module in self.backbone.layers[
-        #                 -self.composer.shared.reinitialize_n_layers :
-        #             ]:
-        #                 self._init_weights(module)
+        # NOTE: here we are reinit weights of backbone's encoder so only works for deberta/bert
+        # , perhaps you may ask why?
+        # The reason is we load from pre-trained, and sometimes we may want to
+        # reset/recalibrate the weights of the backbone (i.e. last N BLOCK)
+        # for stable training. Note this is not reinit pooler or classifier since
+        # they will be reinitialised anyways! So if we want init last 3 BLOCK of layers
+        # then we can set `reinitialize_n_layers_of_backbone=3` in config.
+        if self.config.reinitialize_n_layers_of_backbone > 0:
+            for module in self.deberta.encoder.layer[
+                -self.config.reinitialize_n_layers_of_backbone :
+            ]:
+                logger.info("Reinitializing weights of %s", module.__class__.__name__)
+                self._init_weights(module)
 
         # 2. LOAD POOLER
         self.pooler = get_pooler(config)  # Factory method to get pooler
@@ -137,7 +159,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         self.post_init()
 
     def _init_weights(self, module: nn.Module) -> None:
-        """Initialize the weights."""
+        """Initialize the weights. This overrides base class."""
         init_config = getattr(self.config, "init_config", {})
         _init_weights(module, **init_config)
 

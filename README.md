@@ -138,6 +138,8 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 ## Loss, Combined Loss, Auxiliary Loss etc
 
 -   https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/494873
+-   Ordinal Regression Loss:
+    https://www.ethanrosenthal.com/2018/12/06/spacecutter-ordinal-regression/
 
 ## MISC
 

@@ -233,5 +233,3 @@ def get_optimizer(model, config):
         betas=[config.optimizer.beta1, config.optimizer.beta2],
     )
     return optimizer
-
-

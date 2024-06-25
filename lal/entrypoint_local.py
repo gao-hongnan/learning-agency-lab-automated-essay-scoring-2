@@ -260,11 +260,14 @@ def main(composer: Composer, state: State) -> None:
 
     base_model_config.num_labels = composer.shared.num_labels
     # NOTE: update outside config to deberta's config
+    # NOTE: write a func to take in a list of keys and update the config
     base_model_config.criterion = composer.shared.criterion
     base_model_config.criterion_config = composer.shared.criterion_config
     base_model_config.pooler_type = composer.shared.pooler_type
     base_model_config.pooler_config = composer.shared.pooler_config
     base_model_config.enable_gradient_checkpointing = composer.shared.enable_gradient_checkpointing
+    base_model_config.init_config = composer.shared.init_config
+    base_model_config.reinitialize_n_layers_of_backbone = composer.shared.reinitialize_n_layers_of_backbone
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"

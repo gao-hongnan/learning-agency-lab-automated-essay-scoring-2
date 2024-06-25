@@ -69,9 +69,9 @@ logger = logging.getLogger(__name__)
 #             ]:
 #                 self.freeze_layers(layer)
 
-#         if self.composer.shared.reinitialize_n_layers > 0:
+#         if self.composer.shared.reinitialize_n_layers_of_backbone > 0:
 #             for module in self.backbone.layers[
-#                 -self.composer.shared.reinitialize_n_layers :
+#                 -self.composer.shared.reinitialize_n_layers_of_backbone :
 #             ]:
 #                 self._init_weights(module)
 

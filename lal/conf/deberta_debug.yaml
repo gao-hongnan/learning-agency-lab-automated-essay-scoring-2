@@ -99,7 +99,7 @@ shared:
   inference: false
   use_lora: false
   num_layers_to_remove: null
-  reinitialize_n_layers: 0
+  reinitialize_n_layers_of_backbone: 0
   enable_gradient_checkpointing: false
 
   num_layers_to_freeze: null
