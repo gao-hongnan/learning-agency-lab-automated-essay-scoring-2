@@ -1,7 +1,12 @@
+from typing import Tuple
+
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
-from transformers.models.deberta_v2.modeling_deberta_v2 import *
+from transformers.modeling_outputs import SequenceClassifierOutput
+from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Model, DebertaV2PreTrainedModel, StableDropout
+
+from .poolers import ContextPooler
 
 
 class RegLossForClassification(nn.Module):
@@ -69,16 +74,16 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        token_type_ids: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, SequenceClassifierOutput]:
+        input_ids: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        token_type_ids: torch.Tensor | None = None,
+        position_ids: torch.Tensor | None = None,
+        inputs_embeds: torch.Tensor | None = None,
+        labels: torch.Tensor | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
+    ) -> Tuple | SequenceClassifierOutput:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
@@ -125,3 +130,70 @@ class DebertaV2OLL(DebertaV2PreTrainedModel):
         return SequenceClassifierOutput(
             loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions
         )
+
+
+class DenseCrossEntropy(nn.Module):
+    def forward(self, x, target, weights=None):
+        x = x.float()
+        target = target.float()
+        logprobs = torch.nn.functional.log_softmax(x, dim=-1)
+        loss = -logprobs * target
+        loss = loss.sum(-1)
+        return loss.mean()
+
+
+class WeightedDenseCrossEntropy(nn.Module):
+    def forward(self, x, target, weights=None):
+        x = x.float()
+        target = target.float()
+        logprobs = torch.nn.functional.log_softmax(x, dim=-1)
+        loss = -logprobs * target
+        loss = loss.sum(-1)
+
+        if weights is not None:
+            loss = loss * weights
+            loss = loss.sum() / weights.sum()
+        else:
+            loss = loss.mean()
+
+        return loss
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, weight=None, gamma=2.0, reduction="mean"):
+        nn.Module.__init__(self)
+        self.weight = weight
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, input_tensor, target_tensor, weights=None):
+        log_prob = F.log_softmax(input_tensor, dim=-1)
+        prob = torch.exp(log_prob)
+        return F.nll_loss(
+            ((1 - prob) ** self.gamma) * log_prob,
+            target_tensor.argmax(dim=1),
+            weight=self.weight,
+            reduction=self.reduction,
+        )
+
+
+class RMSELoss(nn.Module):
+    """
+    Code taken from Y Nakama's notebook (https://www.kaggle.com/code/yasufuminakama/fb3-deberta-v3-base-baseline-train)
+    """
+
+    def __init__(self, reduction="mean", eps=1e-9):
+        super().__init__()
+        self.mse = nn.MSELoss(reduction="none")
+        self.reduction = reduction
+        self.eps = eps
+
+    def forward(self, predictions, targets):
+        loss = torch.sqrt(self.mse(predictions, targets) + self.eps)
+        if self.reduction == "none":
+            loss = loss
+        elif self.reduction == "sum":
+            loss = loss.sum()
+        elif self.reduction == "mean":
+            loss = loss.mean()
+        return loss

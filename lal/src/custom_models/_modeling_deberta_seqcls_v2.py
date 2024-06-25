@@ -13,7 +13,7 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
     StableDropout,
 )
 
-from .cls_loss import RegLossForClassification
+from .loss import RegLossForClassification
 from .poolers import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
 
