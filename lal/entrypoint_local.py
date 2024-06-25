@@ -218,8 +218,6 @@ def main(composer: Composer, state: State) -> None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # pprint(tokenizer.init_kwargs)
-
     if composer.shared.task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         tokenizer.add_tokens([AddedToken("\n", normalized=False)])
         tokenizer.add_tokens([AddedToken(" " * 2, normalized=False)])
@@ -336,9 +334,6 @@ def main(composer: Composer, state: State) -> None:
             base_model.config.to_dict(),
             base_model_config.to_dict(),
         )
-    # update this at the end?
-    state.base_model_config = base_model.config.to_dict()
-    pprint(base_model)
 
     try:
         logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
@@ -663,9 +658,17 @@ def main(composer: Composer, state: State) -> None:
     )
     print(f"Validation QWK Score = {qwk}")
 
+    # update this at the end?
+    state.base_model_config = base_model.config.to_dict()
+    state.hf_training_args = training_args.to_dict()
+    state.hf_tokenizer_kwargs = tokenizer.init_kwargs
+    state.statistics = statistics
+
     pprint(composer)
+    pprint(state)
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
+        composer.shared.torch_dtype = str(composer.shared.torch_dtype)
         f.write(json.dumps(composer.model_dump_json(), indent=4))
 
 

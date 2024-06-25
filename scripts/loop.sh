@@ -36,7 +36,7 @@ do
       shared.data_seed=null \
       shared.eval_strategy=epoch \
       shared.greater_is_better=True \
-      shared.learning_rate=3e-5 \
+      shared.learning_rate=1e-5 \
       shared.load_best_model_at_end=True \
       shared.logging_first_step=True \
       shared.lr_scheduler_type=linear \
@@ -54,8 +54,9 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.default=False \
-      shared.criterion=mse \
-      shared.pooler_type=attention" > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
+      shared.criterion=huber \
+      shared.pooler_type=null" > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
 
 wait
+

@@ -9,6 +9,7 @@ artifacts
 *output*
 tmp**.*
 weights*
+dl.sh
 
 # C extensions
 *.so

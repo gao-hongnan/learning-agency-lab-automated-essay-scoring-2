@@ -33,7 +33,7 @@ class State(BaseModel):
     timestamp: str = Field(default_factory=lambda: str(datetime.now().strftime("%Y%m%d%H%M%S")))
 
     base_model_config: Any = None  # this is the model config from hf
+    hf_training_args: Any = None  # this is the training args from hf
 
-    # hf_tokenizer: Any = None  # this is the tokenizer from hf
-    # hf_training_args: Any = None  # this is the training args from hf
-    # statistics: dict[str, Any] = Field(default_factory=dict)
+    hf_tokenizer_kwargs: Any = None  # this is the tokenizer from hf
+    statistics: Statistics = Field(default_factory=dict)
