@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 import torch
 import torch.distributed
-import torchinfo
+# import torchinfo
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
 from omnivault.utils.config_management.omegaconf import load_yaml_config, merge_configs
@@ -390,19 +390,19 @@ def main(composer: Composer, state: State) -> None:
     # NOTE: show model summary
     if composer.shared.show_model_summary:
         logger.info("Showing model summary.")
-        logger.warning(
-            "Be careful as `torchinfo` might MUTATE model init weights, so if you run without `torchinfo` your results from model may differ!"
-        )
-        torchinfo.summary(
-            base_model,
-            verbose=1,
-            input_data={
-                "input_ids": collated_sample_batch["input_ids"],
-                "attention_mask": collated_sample_batch["attention_mask"],
-            },
-            dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
-            device=base_model.device,
-        )
+        # logger.warning(
+        #     "Be careful as `torchinfo` might MUTATE model init weights, so if you run without `torchinfo` your results from model may differ!"
+        # )
+        # torchinfo.summary(
+        #     base_model,
+        #     verbose=1,
+        #     input_data={
+        #         "input_ids": collated_sample_batch["input_ids"],
+        #         "attention_mask": collated_sample_batch["attention_mask"],
+        #     },
+        #     dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
+        #     device=base_model.device,
+        # )
 
     if composer.shared.use_lora:
         logger.info(

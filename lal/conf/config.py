@@ -214,7 +214,7 @@ class Shared(BaseModel):
     pooler_config: dict[str, Any] = {}
 
     # criterion
-    criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber"] | None = None # ordinal-log-loss, cross-entropy, mse
+    criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber", "ordinal_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
     criterion_config: dict[str, Any] = {}
 
     # init config

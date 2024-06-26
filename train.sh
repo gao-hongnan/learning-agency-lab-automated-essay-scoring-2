@@ -3,10 +3,10 @@
 # filepaths all put inside `lal/data/` directory, `topics_map.json` is inside
 # `lal/conf/` directory.
 
-python -m lal.entrypoint_local \
+CUDA_VISIBLE_DEVICES="6,7,8,9" torchrun --nnodes=1 --nproc_per_node=4 -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.taks=REGRESSION \
-    shared.job_type=debug \
+    shared.job_type=train \
     shared.num_labels=1 \
     shared.fold=2 \
     shared.padding_side=right \
@@ -15,7 +15,7 @@ python -m lal.entrypoint_local \
     shared.padding=max_length \
     shared.output_hidden_states=False \
     shared.output_attentions=False \
-    shared.pretrained_model_name_or_path=microsoft/deberta-v3-base \
+    shared.pretrained_model_name_or_path=/data/model/deberta-v3-small \
     shared.target_artifacts_dir=./artifacts \
     shared.verbose=False \
     shared.greater_is_better=True \
@@ -31,6 +31,6 @@ python -m lal.entrypoint_local \
     shared.warmup_ratio=0 \
     shared.desired_effective_batch_size=16 \
     shared.enable_mixed_precision=True \
-    shared.default=True \
-    shared.criterion=null \
+    shared.default=False \
+    shared.criterion=ordinal_loss \
     shared.pooler_type=null
