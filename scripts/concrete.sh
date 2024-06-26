@@ -372,7 +372,7 @@ python -m lal.entrypoint_local \
     shared.pooler_type=attention' > ./artifacts/nohup_chris_4.log 2>&1 &
 
 export ALLOW_WANDB=true && \
-export CUDA_VISIBLE_DEVICES=7 && \
+export CUDA_VISIBLE_DEVICES=6 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=REGRESSION \
@@ -382,7 +382,7 @@ python -m lal.entrypoint_local \
     shared.resample_params.n_splits=5 \
     shared.resample_params.shuffle=true \
     shared.resample_params.random_state=42 \
-    shared.fold=0 \
+    shared.fold=1 \
     shared.padding_side=right \
     shared.max_length=1024 \
     shared.add_special_tokens=True \
