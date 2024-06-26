@@ -555,7 +555,7 @@ def main(composer: Composer, state: State) -> None:
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
     pprint(model)
-    model = OrdinalLogisticModel(model, 6)
+
     trainer = Trainer(
         model=model,
         args=training_args,
