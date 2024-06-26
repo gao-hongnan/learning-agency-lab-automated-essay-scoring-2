@@ -7,6 +7,7 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config
 from .criterion import OrdinalRegressionLoss, RegLossForClassification
 from .pooling import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
+import torch
 
 def get_pooler(config: DebertaV2Config) -> nn.Module:
     """Factory method to get pooler based on the config."""
@@ -40,13 +41,19 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
         if config.problem_type == "regression":
             return MSELoss(**config.criterion_config)
         if config.problem_type == "single_label_classification":
-            return CrossEntropyLoss(**config.criterion_config)
+            if config.criterion_config.get("weight", None) is not None:
+                # NOTE: to solve json not serializable issue we pop the weight.
+                weight = torch.as_tensor(config.criterion_config.pop("weight"))
+            return CrossEntropyLoss(weight=weight, **config.criterion_config)
         if config.problem_type == "multi_label_classification":
             return BCEWithLogitsLoss(**config.criterion_config)
 
     if config.criterion == "mse":
         return MSELoss(**config.criterion_config)
     if config.criterion == "cross_entropy":
+        if config.criterion_config.get("weight", None) is not None:
+            # NOTE: to solve json not serializable issue we pop the weight.
+            weight = torch.as_tensor(config.criterion_config.pop("weight"))
         return CrossEntropyLoss(**config.criterion_config)
     if config.criterion == "bce":
         return BCEWithLogitsLoss(**config.criterion_config)

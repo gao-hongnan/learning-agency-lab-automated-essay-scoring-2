@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 
 class Statistics(BaseModel):
+    class_statistics: Any = None
+
     total_train_samples: int
     total_valid_samples: int | None = None
     total_test_samples: int | None = None

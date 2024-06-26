@@ -212,6 +212,8 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = self._get_loss()
+            loss_fct = loss_fct.to(logits.device)
+
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())

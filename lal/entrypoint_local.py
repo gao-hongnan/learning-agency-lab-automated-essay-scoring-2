@@ -56,7 +56,7 @@ from .src.metrics import (
 from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
-from .src.utils import dry_run, jsonify, load_model
+from .src.utils import calculate_class_weights_and_stats, dry_run, jsonify, load_model
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
@@ -161,6 +161,9 @@ def main(composer: Composer, state: State) -> None:
     logger.debug("DataFrame columns: %s, Shape: %s", df.columns.tolist(), df.shape)
 
     df = process_labels(df, task=composer.shared.task)
+
+    class_statistics = calculate_class_weights_and_stats(df["label"].values)
+    pprint(class_statistics)
 
     if composer.shared.topics_map_filepath:
         df = merge_topic_info_to_df(
@@ -487,6 +490,7 @@ def main(composer: Composer, state: State) -> None:
     )
 
     statistics = Statistics(
+        class_statistics=class_statistics,
         total_train_samples=total_train_samples,
         total_valid_samples=total_valid_samples,
         effective_train_batch_size=effective_train_batch_size,
@@ -686,9 +690,9 @@ def main(composer: Composer, state: State) -> None:
     #     pprint(composer)
     #     pprint(state)
 
-    with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
-        composer.shared.torch_dtype = str(composer.shared.torch_dtype)
-        f.write(json.dumps(composer.model_dump_json(), indent=4))
+    # with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
+    #     composer.shared.torch_dtype = str(composer.shared.torch_dtype)
+    #     f.write(json.dumps(composer.model_dump_json(), indent=4))
 
 
 if __name__ == "__main__":

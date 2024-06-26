@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Dict, List, Tuple
 
+import numpy as np
 import torch
+from sklearn.utils.class_weight import compute_class_weight
 from transformers import (
     AutoModel,
     AutoModelForCausalLM,
@@ -15,10 +17,51 @@ from transformers import (
     PreTrainedTokenizerBase,
     PreTrainedTokenizerFast,
 )
+from transformers.optimization import AdamW
 
 from .logger import get_logger
 
 logger = get_logger(__name__, level=logging.DEBUG)
+
+
+def calculate_class_weights_and_stats(y_train: List[int]) -> Dict[str, Any]:
+    """
+    Calculate class counts, class weights, and return relevant statistics.
+
+    Args:
+        y_train (List[int]): List of class labels in the training set.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing class counts, class weights,
+                        and statistics such as mean, median, and std of class counts.
+    """
+    # Calculate class counts
+    classes, class_counts = np.unique(y_train, return_counts=True)
+
+    # Calculate class weights using sklearn's compute_class_weight
+    class_weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
+
+    # Convert class weights to a tensor
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
+
+    # Calculate statistics for class counts
+    class_count_stats = {
+        "mean": np.mean(class_counts),
+        "median": np.median(class_counts),
+        "std": np.std(class_counts),
+        "min": np.min(class_counts),
+        "max": np.max(class_counts),
+    }
+
+    # Compile all information into a dictionary
+    result = {
+        "class_counts": dict(zip(classes, class_counts)),
+        "class_weights": dict(zip(classes, class_weights)),
+        "class_weights_tensor": class_weights_tensor,
+        "class_count_stats": class_count_stats,
+    }
+
+    return result
 
 
 def jsonify(obj: Any) -> Any:
