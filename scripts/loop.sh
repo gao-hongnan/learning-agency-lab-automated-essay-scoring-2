@@ -15,7 +15,8 @@ do
   python -m lal.entrypoint_local \
       lal/conf/deberta_reg.yaml \
       shared.task=REGRESSION \
-      shared.job_type=train \
+      shared.job_type=train_with_external \
+      shared.torch_dtype=float16 \
       shared.num_labels=1 \
       shared.resample_strategy=StratifiedKFold \
       shared.resample_params.n_splits=5 \
@@ -30,7 +31,7 @@ do
       shared.output_hidden_states=True \
       shared.output_attentions=False \
       shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
-      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp8-large-reinit \
+      shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp9-large-reinit \
       shared.verbose=False \
       shared.adam_epsilon=1e-8 \
       shared.data_seed=null \
@@ -39,7 +40,7 @@ do
       shared.learning_rate=1e-5 \
       shared.load_best_model_at_end=True \
       shared.logging_first_step=True \
-      shared.lr_scheduler_type=cosine \
+      shared.lr_scheduler_type=linear \
       shared.max_grad_norm=1.0 \
       shared.metric_for_best_model=eval_qwk \
       shared.num_train_epochs=5 \
@@ -49,7 +50,7 @@ do
       shared.report_to=wandb \
       shared.save_strategy=epoch \
       shared.save_total_limit=1 \
-      shared.warmup_ratio=0.1 \
+      shared.warmup_ratio=0 \
       shared.weight_decay=0.01 \
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
