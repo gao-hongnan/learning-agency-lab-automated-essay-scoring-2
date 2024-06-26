@@ -240,7 +240,7 @@ class Shared(BaseModel):
     enable_gradient_checkpointing: bool = False
 
     # freeze
-    num_layers_to_freeze: int | None = None
+    freeze_these_layers_indices: List[int] | None = None
     freeze_embeddings: bool = False
 
     # classification/regression

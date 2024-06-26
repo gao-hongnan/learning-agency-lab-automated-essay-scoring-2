@@ -119,6 +119,12 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 -   https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_classification.py
 -   https://huggingface.co/docs/peft/main/en/task_guides/semantic_segmentation_lora
 
+### Pooling And Transformers Representations
+
+-   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
+-   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
+-   https://www.kaggle.com/code/rhtsingh/on-stability-of-few-sample-transformer-fine-tuning?scriptVersionId=67176591&cellId=15
+
 ## Resampling
 
 ### Stratified(Group)KFold
@@ -140,10 +146,6 @@ https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 
 -   [https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279](https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279)
 -   https://www.kaggle.com/code/cdeotte/rapids-svr-starter-cv-0-830-lb-0-804#Find-QWK-Thresholds
-
-## Pooling
-
--   [https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently](https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently)
 
 ## Loss, Combined Loss, Auxiliary Loss etc
 
@@ -167,11 +169,7 @@ https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 
 ## References
 
-### Transformers Representations
-
--   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
 -   https://www.kaggle.com/code/vad13irt/optimization-approaches-for-transformers
--   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
 
 ### Profiling
 

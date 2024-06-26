@@ -129,21 +129,6 @@ def dry_run(model: torch.nn.Module, batch: dict[str, torch.Tensor]) -> dict[str,
         return {"status": "FAILED", "exception": str(exc)}
 
 
-def get_parameters_groups(n_layers, n_groups):
-    layers = [f"backbone.encoder.layer.{n_layers - i - 1}." for i in range(n_layers)]
-    step = math.ceil(n_layers / n_groups)
-    groups = []
-    for i in range(0, n_layers, step):
-        if i + step >= n_layers - 1:
-            group = layers[i:]
-            groups.append(group)
-            break
-        else:
-            group = layers[i : i + step]
-            groups.append(group)
-    return groups
-
-
 def get_grouped_llrd_parameters(model, encoder_lr, decoder_lr, embeddings_lr, lr_mult_factor, weight_decay, n_groups):
     opt_parameters = []
     named_parameters = list(model.named_parameters())

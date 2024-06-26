@@ -4,8 +4,9 @@ import logging
 from typing import Any, Tuple
 
 import torch
-from torch import nn
+from omnivault.utils.torch_utils.model_utils import get_named_modules
 from rich.pretty import pprint
+from torch import nn
 from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import (
     DebertaV2Config,
@@ -16,7 +17,8 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
 
 from ..logger import get_logger
 from .factory import get_loss, get_pooler
-from omnivault.utils.torch_utils.model_utils import get_named_modules
+from omnivault.utils.torch_utils.model_utils import Freezer
+
 logger = get_logger(__name__, level=logging.DEBUG)
 
 
@@ -122,32 +124,25 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         # 1. LOAD BACKBONE
         self.deberta = DebertaV2Model(config)  # NOTE: alias=self.backbone
+        self.freezer = Freezer(self.deberta)
 
         if self.config.enable_gradient_checkpointing:
             logger.info("Enabling gradient checkpointing.")
             self.deberta.gradient_checkpointing_enable()
 
-        # if self.config.freeze_embeddings:
-        #     logger.info("freezing embeddings.")
-        #     embedding_module = self.backbone.embed_tokens
-        #     self.freeze_layers(embedding_module)
+        if self.config.freeze_embeddings:
+            logger.info("freezing embeddings.")
+            embedding_module = self.deberta.embeddings
+            self.freezer.freeze_by_module(embedding_module)
 
-        # if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
-        #     logger.info(
-        #         "freezing the first %s layers.",
-        #         self.composer.shared.num_layers_to_freeze,
-        #     )
-        #     # Here the first layers are frozen: only remaining last layers will be trained
-        #     for layer in self.backbone.layers[
-        #         : self.composer.shared.num_layers_to_freeze
-        #     ]:
-        #         self.freeze_layers(layer)
+        if self.config.freeze_these_layers_indices: # [1, 2]
+            logger.info("freezing the specified layers %s.", self.config.freeze_these_layers_indices)
+            self.freezer.freeze_by_index(self.config.freeze_these_layers_indices, "encoder.layer")
 
+        pprint(self.freezer.report_freezing())
 
         if self.config.reinitialize_n_layers_of_backbone > 0:
-            for module in self.deberta.encoder.layer[
-                -self.config.reinitialize_n_layers_of_backbone :
-            ]:
+            for module in self.deberta.encoder.layer[-self.config.reinitialize_n_layers_of_backbone :]:
                 logger.info("Reinitializing weights of %s", module.__class__.__name__)
                 self._init_weights(module)
 

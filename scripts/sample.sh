@@ -229,6 +229,8 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.pooler_type=mean \
-    shared.reinitialize_n_layers_of_backbone=0
+    shared.reinitialize_n_layers_of_backbone=0 \
+    shared.freeze_these_layers_indices='[]' \
+    shared.freeze_embeddings=False
 
 # Validation QWK Score = 0.1040995444950561

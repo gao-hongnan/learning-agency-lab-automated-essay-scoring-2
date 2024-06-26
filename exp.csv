@@ -10,4 +10,5 @@ v20240625094959,skf-5,,8,1.00E-05,linear,deberta small,reg,null,huber,no,1024/10
 v20240625102856,skf-5,,8,1.00E-05,linear,deberta small,reg,mean,mse,no,1024/1024,0.823401018,,,,,,
 v20240625110020,skf-5,,8,1.00E-05,linear,deberta small,reg,gem,mse,no,1024/1024,0.824144898,0.797,,,,,
 v20240625110020,skf-5,,8,1.00E-05,linear,deberta small,reg,gem,mse,yes,1024/1024,0.824144898,0.796,,,,,
-v20240626001626,skf-5,,8,1.00E-05,linear,deberta large,reg,null,mse,,1024/1024,,,,,,,
+v20240626001626,skf-5,,8,1.00E-05,linear,deberta large,reg,null,mse,yes,1024/1024,0.836016139,,,,,,
+v20240626001626,skf-5,,8,1.00E-05,linear,deberta large,reg,null,mse,yes,1024/1024,0.839418221,0.803,,,,,
