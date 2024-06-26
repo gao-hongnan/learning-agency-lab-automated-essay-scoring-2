@@ -268,6 +268,7 @@ def main(composer: Composer, state: State) -> None:
     base_model_config.enable_gradient_checkpointing = composer.shared.enable_gradient_checkpointing
     base_model_config.init_config = composer.shared.init_config
     base_model_config.reinitialize_n_layers_of_backbone = composer.shared.reinitialize_n_layers_of_backbone
+    base_model_config.freeze_embeddings = composer.shared.freeze_embeddings
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"

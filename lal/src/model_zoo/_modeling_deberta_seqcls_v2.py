@@ -127,21 +127,21 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             logger.info("Enabling gradient checkpointing.")
             self.deberta.gradient_checkpointing_enable()
 
-        if self.config.freeze_embeddings:
-            logger.info("freezing embeddings.")
-            embedding_module = self.backbone.embed_tokens
-            self.freeze_layers(embedding_module)
+        # if self.config.freeze_embeddings:
+        #     logger.info("freezing embeddings.")
+        #     embedding_module = self.backbone.embed_tokens
+        #     self.freeze_layers(embedding_module)
 
-        if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
-            logger.info(
-                "freezing the first %s layers.",
-                self.composer.shared.num_layers_to_freeze,
-            )
-            # Here the first layers are frozen: only remaining last layers will be trained
-            for layer in self.backbone.layers[
-                : self.composer.shared.num_layers_to_freeze
-            ]:
-                self.freeze_layers(layer)
+        # if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
+        #     logger.info(
+        #         "freezing the first %s layers.",
+        #         self.composer.shared.num_layers_to_freeze,
+        #     )
+        #     # Here the first layers are frozen: only remaining last layers will be trained
+        #     for layer in self.backbone.layers[
+        #         : self.composer.shared.num_layers_to_freeze
+        #     ]:
+        #         self.freeze_layers(layer)
 
 
         if self.config.reinitialize_n_layers_of_backbone > 0:
