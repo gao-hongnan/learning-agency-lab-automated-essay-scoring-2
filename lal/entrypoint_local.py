@@ -27,6 +27,7 @@ from omnivault.utils.train_utils.resampling import create_folds
 from peft import LoraConfig, get_peft_model
 from rich.pretty import pprint
 from sklearn.metrics import cohen_kappa_score
+from spacecutter.models import OrdinalLogisticModel
 from transformers import (
     AddedToken,
     AutoConfig,
@@ -554,6 +555,7 @@ def main(composer: Composer, state: State) -> None:
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
     pprint(model)
+    model = OrdinalLogisticModel(model, 6)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -712,24 +714,6 @@ if __name__ == "__main__":
     main(composer, state)
 
 """
-# DEBERTA DEBUG
-
-python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
-learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=SINGLE_LABEL_CLASSIFICATION \
-shared.job_type=debug \
-shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
-shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \
-shared.use_lora=False \
-shared.pretrained_model_name_or_path=microsoft/deberta-v3-small \
-shared.task_type='SEQ_CLS' \
-shared.target_modules='["query_proj", "key_proj", "value_proj"]' \
-shared.modules_to_save='["classifier"]' \
-shared.target_artifacts_dir=learning_agency_lab_automated_essay_scoring_2/artifacts \
-shared.metric_for_best_model='eval_qwk' \
-shared.greater_is_better=True \
-shared.lr_scheduler_type='cosine'
-
  {'eval_qwk': -0.15267175572519087, 'eval_loss': 1.4653687477111816}
 {'train_loss': 1.60413059592247}
 Validation QWK Score = -0.08688309251266646

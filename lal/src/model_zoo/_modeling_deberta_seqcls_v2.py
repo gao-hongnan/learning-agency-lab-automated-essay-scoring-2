@@ -4,7 +4,7 @@ import logging
 from typing import Any, Tuple
 
 import torch
-from omnivault.utils.torch_utils.model_utils import get_named_modules
+from omnivault.utils.torch_utils.model_utils import Freezer, get_named_modules
 from rich.pretty import pprint
 from torch import nn
 from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
@@ -17,7 +17,6 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
 
 from ..logger import get_logger
 from .factory import get_loss, get_pooler
-from omnivault.utils.torch_utils.model_utils import Freezer
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
@@ -102,7 +101,6 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     maybe with `loss_config` and `pooler_config` to customize the loss and pooler
     for the sequence classification task.
 
-
     Notes
     -----
     [1] `if self.config.reinitialize_n_layers_of_backbone > 0: ...`
@@ -135,7 +133,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             embedding_module = self.deberta.embeddings
             self.freezer.freeze_by_module(embedding_module)
 
-        if self.config.freeze_these_layers_indices: # [1, 2]
+        if self.config.freeze_these_layers_indices:  # [1, 2]
             logger.info("freezing the specified layers %s.", self.config.freeze_these_layers_indices)
             self.freezer.freeze_by_index(self.config.freeze_these_layers_indices, "encoder.layer")
 
