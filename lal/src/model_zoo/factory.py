@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config
 
-from .criterion import RegLossForClassification, OrdinalRegressionLoss
+from .criterion import OrdinalRegressionLoss, RegLossForClassification
 from .pooling import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
 

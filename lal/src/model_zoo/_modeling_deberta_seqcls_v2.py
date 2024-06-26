@@ -4,7 +4,7 @@ import logging
 from typing import Any, Tuple
 
 import torch
-from omnivault.utils.torch_utils.model_utils import Freezer, get_named_modules
+from omnivault.utils.torch_utils.model_utils import Freezer
 from rich.pretty import pprint
 from torch import nn
 from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput

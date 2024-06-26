@@ -27,7 +27,6 @@ from omnivault.utils.train_utils.resampling import create_folds
 from peft import LoraConfig, get_peft_model
 from rich.pretty import pprint
 from sklearn.metrics import cohen_kappa_score
-from spacecutter.models import OrdinalLogisticModel
 from transformers import (
     AddedToken,
     AutoConfig,
@@ -48,7 +47,12 @@ from .conf.config import ALLOW_WANDB, Composer, Shared
 from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
-from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
+from .src.metrics import (
+    compute_metrics_for_classification,
+    compute_metrics_for_ordinal_regression,
+    compute_metrics_for_reg_cls,
+    compute_metrics_for_regression,
+)
 from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -549,7 +553,10 @@ def main(composer: Composer, state: State) -> None:
         else:
             compute_metrics = compute_metrics_for_classification
     elif composer.shared.task == "REGRESSION":
-        compute_metrics = compute_metrics_for_regression
+        if composer.shared.criterion == "ordinal_reg_loss":
+            compute_metrics = compute_metrics_for_ordinal_regression
+        else:
+            compute_metrics = compute_metrics_for_regression
     else:
         compute_metrics = None
 

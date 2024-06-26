@@ -8,12 +8,9 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Model, D
 
 from .pooling import ContextPooler
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 class OrdinalRegressionLoss(nn.Module):
-    def __init__(self, num_classes: int, init_cutpoints: str  = "ordered") -> None:
+    def __init__(self, num_classes: int, init_cutpoints: str = "ordered") -> None:
         """
         Initialize the ordinal regression loss module with custom class count and initial cutpoints.
 
@@ -24,12 +21,12 @@ class OrdinalRegressionLoss(nn.Module):
         super().__init__()
         self.num_classes = num_classes
 
-        if init_cutpoints == 'ordered':
+        if init_cutpoints == "ordered":
             # Initialize cutpoints to be ordered and centered around zero
             num_cutpoints = num_classes - 1
             cutpoints = torch.arange(num_cutpoints).float() - num_cutpoints / 2
         else:
-            raise ValueError(f'{init_cutpoints} is not a valid init_cutpoints type')
+            raise ValueError(f"{init_cutpoints} is not a valid init_cutpoints type")
         self.cutpoints = nn.Parameter(cutpoints.clone().detach().requires_grad_(True))
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -51,8 +48,9 @@ class OrdinalRegressionLoss(nn.Module):
         cum_targets = (targets.unsqueeze(1) > torch.arange(self.num_classes - 1).to(logits.device)).float()
 
         # Apply binary cross-entropy loss on cumulative logits
-        loss = F.binary_cross_entropy_with_logits(cumulative_logits, cum_targets, reduction='mean')
+        loss = F.binary_cross_entropy_with_logits(cumulative_logits, cum_targets, reduction="mean")
         return loss
+
 
 class RegLossForClassification(nn.Module):
     def __init__(self, alpha: float = 0.35) -> None:
