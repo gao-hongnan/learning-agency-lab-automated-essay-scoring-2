@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -295,10 +296,10 @@ def main(composer: Composer, state: State) -> None:
         raise ValueError(f"Unsupported task type: {composer.shared.task}")
 
     if base_model_config.pad_token_id is None or base_model_config.pad_token_id != tokenizer.pad_token_id:
-        logger.warning("Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`.")
+        logger.warning("Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`. see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined")
         base_model_config.pad_token_id = (
             tokenizer.pad_token_id
-        )  # see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined
+        )
 
     pprint(base_model_config)
 
@@ -591,6 +592,7 @@ def main(composer: Composer, state: State) -> None:
 
         trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)  # if None is no ops
         torch.cuda.empty_cache()
+
         trainer.save_model(output_dir=composer.shared.output_dir)
         trainer.save_state()
         tokenizer.save_pretrained(composer.shared.output_dir)
@@ -686,13 +688,13 @@ def main(composer: Composer, state: State) -> None:
     state.hf_tokenizer_kwargs = tokenizer.init_kwargs
     state.statistics = statistics
 
-    # if composer.shared.verbose:
-    #     pprint(composer)
-    #     pprint(state)
+    if composer.shared.verbose:
+        pprint(composer.shared.freeze_these_layers_indices)
+        pprint(state)
 
-    # with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
-    #     composer.shared.torch_dtype = str(composer.shared.torch_dtype)
-    #     f.write(json.dumps(composer.model_dump_json(), indent=4))
+    with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
+        composer.shared.torch_dtype = str(composer.shared.torch_dtype)
+        f.write(json.dumps(composer.model_dump_json(), indent=4))
 
 
 if __name__ == "__main__":
@@ -701,11 +703,13 @@ if __name__ == "__main__":
 
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, args_list)
+    # cfg = om.to_container(cfg, resolve=True)
     om.resolve(cfg)  # inplace ops
 
     composer = Composer(shared=Shared(**cfg.shared))
     state = State()
     pprint(composer)
+
     pprint(state)
     # NOTE: base composer is basically an immutable copy of composer where the
     # base configurations provided by user are stored. Why this? Cause in ml,
