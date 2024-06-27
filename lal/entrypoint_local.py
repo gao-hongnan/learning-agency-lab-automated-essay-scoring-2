@@ -620,24 +620,22 @@ def main(composer: Composer, state: State) -> None:
         run.finish()
 
     if composer.shared.do_eval:
-        y_true = valid_df["score"].values
+        y_trues = valid_df.score.values
 
         if composer.shared.task == "REGRESSION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
-            predictions = logits.round(0) + 1
             valid_df["logits"] = logits + 1
             qwk = cohen_kappa_score(
-                valid_df.score.values,
+                y_trues,
                 valid_df.logits.values.clip(1, 6).round(0),
                 weights="quadratic",
             )
         elif composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
-            predictions = logits.argmax(axis=1) + 1
             columns = [f"p{x}" for x in range(composer.shared.num_labels)]
             valid_df[columns] = logits
             qwk = cohen_kappa_score(
-                valid_df.score.values,
+                y_trues,
                 valid_df.iloc[:, -6:].values.argmax(axis=1) + 1,
                 weights="quadratic",
             )
@@ -687,7 +685,6 @@ def main(composer: Composer, state: State) -> None:
                     print(f"preds[:8]={preds}, ", end="")
 
             qwk = cohen_kappa_score(valid_df.score.values, preds, weights="quadratic")
-            print(f"Validation QWK Score = {qwk}")
 
     valid_df.to_csv(
         f"{str(composer.shared.output_dir)}/valid_df_fold_{composer.shared.fold}.csv",
