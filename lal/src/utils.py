@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
@@ -55,8 +55,8 @@ def calculate_class_weights_and_stats(y_train: List[int]) -> Dict[str, Any]:
 
     # Compile all information into a dictionary
     result = {
-        "class_counts": dict(zip(classes, class_counts)),
-        "class_weights": dict(zip(classes, class_weights)),
+        "class_counts": dict(zip(classes, class_counts, strict=False)),
+        "class_weights": dict(zip(classes, class_weights, strict=False)),
         "class_weights_tensor": class_weights_tensor,
         "class_count_stats": class_count_stats,
     }

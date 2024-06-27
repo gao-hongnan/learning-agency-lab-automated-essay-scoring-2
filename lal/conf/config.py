@@ -217,6 +217,9 @@ class Shared(BaseModel):
     criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber", "ordinal_reg_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
     criterion_config: dict[str, Any] = {}
 
+    # optimizer
+    # optimizer_type
+
     # init config
     init_config: dict[str, Any] = {}
 

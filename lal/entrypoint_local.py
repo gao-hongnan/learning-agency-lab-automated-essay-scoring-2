@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +54,7 @@ from .src.metrics import (
     compute_metrics_for_regression,
 )
 from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
+from .src.model_zoo.optimizer import get_optimizer_grouped_parameters
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
 from .src.utils import calculate_class_weights_and_stats, dry_run, jsonify, load_model
@@ -296,10 +296,10 @@ def main(composer: Composer, state: State) -> None:
         raise ValueError(f"Unsupported task type: {composer.shared.task}")
 
     if base_model_config.pad_token_id is None or base_model_config.pad_token_id != tokenizer.pad_token_id:
-        logger.warning("Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`. see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined")
-        base_model_config.pad_token_id = (
-            tokenizer.pad_token_id
+        logger.warning(
+            "Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`. see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined"
         )
+        base_model_config.pad_token_id = tokenizer.pad_token_id
 
     pprint(base_model_config)
 
@@ -552,6 +552,7 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(training_args)
 
+    # NOTE: METRICS SHENANIGANS
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         if composer.shared.criterion == "reg_cls_loss":
             compute_metrics = compute_metrics_for_reg_cls
@@ -568,6 +569,17 @@ def main(composer: Composer, state: State) -> None:
     model = base_model_with_adapter if composer.shared.use_lora else base_model
     pprint(model)
 
+    # NOTE: OPTIMIZER SHENANIGANS
+    grouped_optimizer_params = get_optimizer_grouped_parameters(
+        model=model,
+        learning_rate=composer.shared.learning_rate,
+        weight_decay=composer.shared.weight_decay,
+        layerwise_learning_rate_decay=0.95,
+    )
+    optimizer = torch.optim.AdamW(
+        grouped_optimizer_params,
+        lr=composer.shared.learning_rate,
+    )
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -575,6 +587,7 @@ def main(composer: Composer, state: State) -> None:
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_valid_dataset,
         compute_metrics=compute_metrics,
+        optimizers=(optimizer, None),
     )
 
     if composer.shared.do_train:

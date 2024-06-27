@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import torch
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
@@ -33,6 +35,13 @@ def get_pooler(config: DebertaV2Config) -> nn.Module:
         )
     else:
         raise ValueError(f"Pooler {config.pooler_type} is not supported.")
+
+
+def get_optimizer(optimizer_type: str, model: nn.Module, **kwargs: Any) -> torch.optim.Optimizer:
+    """Factory method to get optimizer based on the config."""
+
+    if optimizer_type == "adamw":
+        return torch.optim.AdamW(model.parameters(), **kwargs)
 
 
 def get_loss(config: DebertaV2Config) -> nn.Module:
