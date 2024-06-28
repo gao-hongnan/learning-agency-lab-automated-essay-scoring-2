@@ -1,4 +1,14 @@
-nohup sh -c 'export ALLOW_WANDB=true && \
+#!/bin/bash
+
+# Define the path to save the logs
+LOG_DIR="./artifacts"
+
+mkdir -p $LOG_DIR
+
+TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+FOLD=0
+
+nohup sh -c "export ALLOW_WANDB=true && \
 export CUDA_VISIBLE_DEVICES=0 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
@@ -9,7 +19,7 @@ python -m lal.entrypoint_local \
     shared.resample_params.n_splits=5 \
     shared.resample_params.shuffle=true \
     shared.resample_params.random_state=42 \
-    shared.fold=0 \
+    shared.fold=$FOLD \
     shared.padding_side=right \
     shared.max_length=1536 \
     shared.add_special_tokens=True \
@@ -18,7 +28,7 @@ python -m lal.entrypoint_local \
     shared.output_hidden_states=False \
     shared.output_attentions=False \
     shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
-    shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp-1  \
+    shared.target_artifacts_dir=/mnt/data/jundazhu/artifacts/exp-$TIMESTAMP  \
     shared.verbose=False \
     shared.adam_epsilon=1e-8 \
     shared.data_seed=null \
@@ -44,4 +54,4 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.reinitialize_n_layers_of_backbone=0 \
-    shared.pooler_type=null' > ./artifacts/nohup_chris_f0.log 2>&1 &
+    shared.pooler_type=null" > /mnt/data/jundazhu/artifacts/exp-$TIMESTAMP/nohup_chris_$fold.log 2>&1 &
