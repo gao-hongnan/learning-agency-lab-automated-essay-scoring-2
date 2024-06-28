@@ -7,7 +7,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config
 
-from .criterion import OrdinalRegressionLoss, RegLossForClassification
+from .criterion import OrdinalRegressionLoss, RegLossForClassification, SmoothL1WithMSE
 from .pooling import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 
 
@@ -73,4 +73,6 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
         return nn.HuberLoss(**config.criterion_config)
     if config.criterion == "ordinal_reg_loss":
         return OrdinalRegressionLoss(**config.criterion_config)
+    if config.criterion == "SmoothL1WithMSE":
+        return SmoothL1WithMSE(**config.criterion_config)
     raise ValueError(f"Criterion {config.criterion} is not supported.")

@@ -3,6 +3,7 @@
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 LOG_DIR="./artifacts/exp1-$TIMESTAMP"
 ARTIFACTS_DIR="/mnt/data/jundazhu/artifacts/exp1-$TIMESTAMP"
+PID_FILE="$LOG_DIR/pids.txt"
 
 mkdir -p $LOG_DIR
 
@@ -16,7 +17,7 @@ do
     python -m lal.entrypoint_local \
         lal/conf/deberta_reg.yaml \
         shared.task=REGRESSION \
-        shared.job_type=train_with_external \
+        shared.job_type=train \
         shared.num_labels=1 \
         shared.resample_strategy=StratifiedKFold \
         shared.resample_params.n_splits=5 \
@@ -55,9 +56,11 @@ do
         shared.desired_effective_batch_size=8 \
         shared.enable_mixed_precision=True \
         shared.default=False \
-        shared.criterion=mse \
-        shared.reinitialize_n_layers_of_backbone=1 \
-        shared.pooler_type=mean \
+        shared.criterion=SmoothL1WithMSE \
+        shared.reinitialize_n_layers_of_backbone=0 \
+        shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
         shared.layer_wise_learning_rate_decay=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+
+    echo $! >> $PID_FILE
 done

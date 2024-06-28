@@ -56,7 +56,7 @@ from .src.metrics import (
     compute_metrics_for_regression,
 )
 from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
-from .src.model_zoo.optimizer import get_optimizer_grouped_parameters
+from .src.model_zoo.optimizer import get_optimizer_grouped_parameters, get_decay_parameter_names
 from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -594,12 +594,32 @@ def main(composer: Composer, state: State) -> None:
         weight_decay=composer.shared.weight_decay,
         layerwise_learning_rate_decay_mulitplier=0.95,
     )
-    pprint(grouped_optimizer_params)
+    # pprint(grouped_optimizer_params)
+
+    HF_DEFAULT_DECAY = get_decay_parameter_names(model=model)
+    HF_DEFAULT_OPTIMIZER_GROUP = [
+        {
+            "params": [
+                parameter
+                for parameter_name, parameter in model.named_parameters()
+                if (parameter_name in HF_DEFAULT_DECAY and parameter.requires_grad)
+            ]
+        },
+        {
+            "params": [
+                parameter
+                for parameter_name, parameter in model.named_parameters()
+                if parameter_name not in HF_DEFAULT_DECAY and parameter.requires_grad
+            ]
+        },
+    ]
+
     optimizer = torch.optim.AdamW(
-        model.parameters() if not composer.shared.very_custom_optimizer_group else grouped_optimizer_params,
+        HF_DEFAULT_OPTIMIZER_GROUP if not composer.shared.very_custom_optimizer_group else grouped_optimizer_params,
         lr=composer.shared.learning_rate,
         eps=composer.shared.adam_epsilon,
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
+        weight_decay=composer.shared.weight_decay,
     )
     pprint(optimizer)
 
