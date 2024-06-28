@@ -36,7 +36,7 @@ python -m lal.entrypoint_local \
     shared.data_seed=null \
     shared.eval_strategy=epoch \
     shared.greater_is_better=True \
-    shared.learning_rate=4e-5 \
+    shared.learning_rate=2e-5 \
     shared.load_best_model_at_end=True \
     shared.logging_first_step=True \
     shared.lr_scheduler_type=linear \
@@ -44,14 +44,14 @@ python -m lal.entrypoint_local \
     shared.metric_for_best_model=eval_qwk \
     shared.num_train_epochs=5 \
     shared.optim=adamw_torch \
-    shared.per_device_train_batch_size=32 \
-    shared.per_device_eval_batch_size=32 \
+    shared.per_device_train_batch_size=16 \
+    shared.per_device_eval_batch_size=16 \
     shared.report_to=wandb \
     shared.save_strategy=epoch \
     shared.save_total_limit=2 \
     shared.warmup_ratio=0 \
     shared.weight_decay=0.01 \
-    shared.desired_effective_batch_size=32 \
+    shared.desired_effective_batch_size=16 \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=mse \
