@@ -54,4 +54,4 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.reinitialize_n_layers_of_backbone=0 \
-    shared.pooler_type=null" > /mnt/data/jundazhu/artifacts/exp-$TIMESTAMP/nohup_chris_$fold.log 2>&1 &
+    shared.pooler_type=null" > ./artifacts/exp-$TIMESTAMP/nohup_chris_$fold.log 2>&1 &
