@@ -4,6 +4,10 @@ Dealing with HF training is not fun, and by and large I would like my own small
 customizations and to confirm that my changes are working as expected I need a
 way to tell if my changes with some default settings change the score values.
 
+Checking out to below commit and run locally on mps yields the below results.
+
+## 55bda58ab5fbcb7f8421f900c830480ca2c4b97b
+
 ```text
 INFO: 2024-06-25 08:36:49,293: __main__  Sanity Check Last Layer Weights: -0.004328871
 INFO: 2024-06-25 08:36:49,358: __main__  Collated sample batch keys: dict_keys(['input_ids', 'token_type_ids', 'attention_mask', 'labels'])
