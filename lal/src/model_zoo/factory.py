@@ -73,6 +73,6 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
         return nn.HuberLoss(**config.criterion_config)
     if config.criterion == "ordinal_reg_loss":
         return OrdinalRegressionLoss(**config.criterion_config)
-    if config.criterion == "SmoothL1WithMSE":
+    if config.criterion == "smooth_l1_with_mse":
         return SmoothL1WithMSE(**config.criterion_config)
     raise ValueError(f"Criterion {config.criterion} is not supported.")

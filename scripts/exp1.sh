@@ -56,7 +56,7 @@ do
         shared.desired_effective_batch_size=8 \
         shared.enable_mixed_precision=True \
         shared.default=False \
-        shared.criterion=SmoothL1WithMSE \
+        shared.criterion=smooth_l1_with_mse \
         shared.reinitialize_n_layers_of_backbone=0 \
         shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
