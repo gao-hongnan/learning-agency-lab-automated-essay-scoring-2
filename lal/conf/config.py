@@ -327,6 +327,9 @@ class Shared(BaseModel):
     base_learning_rate: float = 6.25e-06 # this works ok for lm 5e-5 # we derive the real lr later.
     desired_effective_batch_size: int = 16 # this means no matter how many gpus, world size or what not, you want a 16 global batch size.
     enable_mixed_precision: bool = True
+    scheduler_specific_kwargs: dict[str, Any] = {}
+    very_custom_optimizer_group: bool = False
+    layer_wise_learning_rate_decay: float | None = Field(default=None)
     # fmt: on
 
     class Config:

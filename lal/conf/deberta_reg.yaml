@@ -164,3 +164,6 @@ shared:
   base_learning_rate: 0.00001 # CHANGE
   desired_effective_batch_size: 8 # CHANGE
   enable_mixed_precision: true
+  scheduler_specific_kwargs: {}
+  very_custom_optimizer_group: false
+  layer_wise_learning_rate_decay: null

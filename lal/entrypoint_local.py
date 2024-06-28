@@ -181,6 +181,7 @@ def main(composer: Composer, state: State) -> None:
             df,
             pd.read_csv(composer.shared.predicted_prompt_filepath),
         )
+
     if composer.shared.external_data_filepath:
         external_df = pd.read_csv(composer.shared.external_data_filepath)
         external_df = process_labels(external_df, task=composer.shared.task, target_column="holistic_essay_score")
@@ -594,8 +595,7 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(grouped_optimizer_params)
     optimizer = torch.optim.AdamW(
-        # grouped_optimizer_params,
-        model.parameters(),
+        model.parameters() if not composer.shared.very_custom_optimizer_group else grouped_optimizer_params,
         lr=composer.shared.learning_rate,
         eps=composer.shared.adam_epsilon,
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
@@ -612,6 +612,7 @@ def main(composer: Composer, state: State) -> None:
             warmup_ratio=composer.shared.warmup_ratio,
         ),
         num_training_steps=total_train_steps,
+        scheduler_specific_kwargs=composer.shared.scheduler_specific_kwargs,
     )
     trainer = Trainer(
         model=model,
