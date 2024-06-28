@@ -579,6 +579,8 @@ def main(composer: Composer, state: State) -> None:
     optimizer = torch.optim.AdamW(
         grouped_optimizer_params,
         lr=composer.shared.learning_rate,
+        eps=composer.shared.adam_epsilon,
+        betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
     )
     trainer = Trainer(
         model=model,
