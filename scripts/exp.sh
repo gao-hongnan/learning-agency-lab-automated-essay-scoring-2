@@ -11,7 +11,7 @@ python -m lal.entrypoint_local \
     shared.resample_params.random_state=42 \
     shared.fold=0 \
     shared.padding_side=right \
-    shared.max_length=1024 \
+    shared.max_length=1536 \
     shared.add_special_tokens=True \
     shared.padding=False \
     shared.truncation=True \
@@ -30,7 +30,7 @@ python -m lal.entrypoint_local \
     shared.lr_scheduler_type=linear \
     shared.max_grad_norm=1.0 \
     shared.metric_for_best_model=eval_qwk \
-    shared.num_train_epochs=6 \
+    shared.num_train_epochs=4 \
     shared.optim=adamw_torch \
     shared.per_device_train_batch_size=2 \
     shared.per_device_eval_batch_size=8 \
@@ -43,5 +43,5 @@ python -m lal.entrypoint_local \
     shared.enable_mixed_precision=True \
     shared.default=False \
     shared.criterion=mse \
-    shared.reinitialize_n_layers_of_backbone=1 \
-    shared.pooler_type=null' > ./artifacts/nohup_chris_f0.log 2>&1 &
+    shared.reinitialize_n_layers_of_backbone=0 \
+    shared.pooler_type=mean' > ./artifacts/nohup_chris_f0.log 2>&1 &
