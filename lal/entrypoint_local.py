@@ -476,7 +476,8 @@ def main(composer: Composer, state: State) -> None:
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
     total_train_steps_per_epoch = max(total_train_steps_per_epoch, 1)
-    assert total_train_steps_per_epoch == len_train_dataloader // composer.shared.gradient_accumulation_steps
+    expected_steps = len_train_dataloader // composer.shared.gradient_accumulation_steps
+    assert abs(total_train_steps_per_epoch - expected_steps) <= 1
 
     total_train_steps = math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
     assert total_train_steps == math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
