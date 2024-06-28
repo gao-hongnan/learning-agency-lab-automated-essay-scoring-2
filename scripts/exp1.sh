@@ -7,12 +7,12 @@ ARTIFACTS_DIR="/mnt/data/jundazhu/artifacts/exp1-$TIMESTAMP"
 mkdir -p $LOG_DIR
 
 
-for fold in 0 1 2 3 4
+for FOLD in {0..4}
 do
-    GPU_ID=$((fold % 5))
+    DEVICE=$(echo "${FOLD}+0" | bc)
 
     nohup sh -c "export ALLOW_WANDB=true && \
-    export CUDA_VISIBLE_DEVICES=7 && \
+    export CUDA_VISIBLE_DEVICES=$DEVICE && \
     python -m lal.entrypoint_local \
         lal/conf/deberta_reg.yaml \
         shared.task=REGRESSION \
@@ -60,3 +60,4 @@ do
         shared.pooler_type=mean \
         shared.very_custom_optimizer_group=False \
         shared.layer_wise_learning_rate_decay=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+done
