@@ -278,7 +278,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         topic_ids = topic_ids.flatten()
 
-        logits = torch.stack([self.classifier[topic_ids[idx]](pooled_output) for idx in range(pooled_output.shape[0])], dim=0)
+        logits = torch.stack([self.classifier[topic_ids[idx]](pooled_output[idx]) for idx in range(pooled_output.shape[0])], dim=0)
 
         loss = None
         if labels is not None:
