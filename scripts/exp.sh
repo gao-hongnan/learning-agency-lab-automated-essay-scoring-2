@@ -11,7 +11,7 @@ LOG_DIR="./artifacts/exp-$TIMESTAMP"
 mkdir -p $LOG_DIR
 
 nohup sh -c "export ALLOW_WANDB=true && \
-export CUDA_VISIBLE_DEVICES=0 && \
+export CUDA_VISIBLE_DEVICES=7 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=REGRESSION \
@@ -56,4 +56,4 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.reinitialize_n_layers_of_backbone=0 \
-    shared.pooler_type=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+    shared.pooler_type=mean" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
