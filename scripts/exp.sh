@@ -44,4 +44,4 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.reinitialize_n_layers_of_backbone=0 \
-    shared.pooler_type=mean' > ./artifacts/nohup_chris_f0.log 2>&1 &
+    shared.pooler_type=null' > ./artifacts/nohup_chris_f0.log 2>&1 &
