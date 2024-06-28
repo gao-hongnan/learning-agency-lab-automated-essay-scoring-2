@@ -42,7 +42,7 @@ python -m lal.entrypoint_local \
     shared.lr_scheduler_type=linear \
     shared.max_grad_norm=1.0 \
     shared.metric_for_best_model=eval_qwk \
-    shared.num_train_epochs=4 \
+    shared.num_train_epochs=5 \
     shared.optim=adamw_torch \
     shared.per_device_train_batch_size=2 \
     shared.per_device_eval_batch_size=8 \
