@@ -55,27 +55,81 @@ def get_decay_parameter_names(model: nn.Module) -> List[str]:
 # LLRD
 
 
-def get_optimizer_grouped_parameters(model: nn.Module, learning_rate, weight_decay, layerwise_learning_rate_decay):
+def get_optimizer_grouped_parameters(
+    model: nn.Module,
+    learning_rate: float,
+    weight_decay: float,
+    layerwise_learning_rate_decay_mulitplier: float = 0.95,
+    embeddings_lr: float | None = None,
+    backbone_lr: float | None = None,
+    pooler_lr: float | None = None,
+    head_lr: float | None = None,
+    embeddings_weight_decay: float | None = None,
+    backbone_weight_decay: float | None = None,
+    pooler_weight_decay: float | None = None,
+    head_weight_decay: float | None = None,
+):
     # LayerNorm.bias is automatically included in no decay since bias is in no decay
     no_decay = ["bias", "LayerNorm.weight"]
     # initialize lr for task specific layer
-    optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters() if "classifier" in n or "pooler" in n],
-            "weight_decay": 0.0,
-            "lr": learning_rate,
-        },
-    ]
+
     # initialize lrs for every layer
     num_layers = model.config.num_hidden_layers
     embeddings = model.deberta.embeddings
     backbone = model.deberta.encoder.layer
+    pooler = model.pooler
+    head = model.classifier
+
+    # this group applies no weight decay
+    pooler_no_decay = {
+        "params": [
+            parameter
+            for parameter_name, parameter in pooler.named_parameters()
+            if any(nd in parameter_name for nd in no_decay)
+        ],
+        "weight_decay": 0.0,
+        "lr": learning_rate if pooler_lr is None else pooler_lr,
+    }
+
+    pooler_decay = {
+        "params": [
+            parameter
+            for parameter_name, parameter in pooler.named_parameters()
+            if not any(nd in parameter_name for nd in no_decay)
+        ],
+        "weight_decay": weight_decay if pooler_weight_decay is None else pooler_weight_decay,
+        "lr": learning_rate if pooler_lr is None else pooler_lr,
+    }
+
+    head_no_decay = {
+        "params": [
+            parameter
+            for parameter_name, parameter in head.named_parameters()
+            if any(nd in parameter_name for nd in no_decay)
+        ],
+        "weight_decay": 0.0,
+        "lr": learning_rate if head_lr is None else head_lr,
+    }
+
+    head_decay = {
+        "params": [
+            parameter
+            for parameter_name, parameter in head.named_parameters()
+            if not any(nd in parameter_name for nd in no_decay)
+        ],
+        "weight_decay": weight_decay if head_weight_decay is None else head_weight_decay,
+        "lr": learning_rate if head_lr is None else head_lr,
+    }
+
+    optimizer_grouped_parameters = [pooler_no_decay, pooler_decay, head_no_decay, head_decay]
 
     layers = [embeddings] + list(backbone)
     layers.reverse()
     lr = learning_rate
     for layer in layers:
-        lr *= layerwise_learning_rate_decay
+        lr *= layerwise_learning_rate_decay_mulitplier
+        # NOTE: add no decay and decay groups for encoder/backbone
+
         optimizer_grouped_parameters += [
             {
                 "params": [p for n, p in layer.named_parameters() if not any(nd in n for nd in no_decay)],

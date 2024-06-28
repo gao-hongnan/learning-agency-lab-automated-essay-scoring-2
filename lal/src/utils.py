@@ -211,6 +211,59 @@ def get_grouped_llrd_parameters(model, encoder_lr, decoder_lr, embeddings_lr, lr
     return opt_parameters
 
 
+def get_parameters_groups(n_layers, n_groups):
+    layers = [f"backbone.encoder.layer.{n_layers - i - 1}." for i in range(n_layers)]
+    step = math.ceil(n_layers / n_groups)
+    groups = []
+    for i in range(0, n_layers, step):
+        if i + step >= n_layers - 1:
+            group = layers[i:]
+            groups.append(group)
+            break
+        else:
+            group = layers[i : i + step]
+            groups.append(group)
+    return groups
+
+
+def get_grouped_llrd_parameters(
+    model,
+    encoder_lr,
+    decoder_lr,
+    embeddings_lr,
+    lr_mult_factor,
+    weight_decay,
+    n_groups,
+):
+    opt_parameters = []
+    named_parameters = list(model.named_parameters())
+
+    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
+
+    n_layers = model.backbone_config.num_hidden_layers
+    parameters_groups = get_parameters_groups(n_layers, n_groups)
+
+    for _, (name, params) in enumerate(named_parameters):
+        wd = 0.0 if any(p in name for p in no_decay) else weight_decay
+
+        if name.startswith("backbone.encoder"):
+            lr = encoder_lr
+            for i, group in enumerate(parameters_groups):
+                lr = encoder_lr * (lr_mult_factor ** (i + 1)) if any(p in name for p in group) else lr
+
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+        if name.startswith("backbone.embeddings"):
+            lr = embeddings_lr
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+        if name.startswith("fc") or name.startswith("backbone.pooler"):
+            lr = decoder_lr
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+    return opt_parameters
+
+
 def get_optimizer_params(model, encoder_lr, decoder_lr, weight_decay=0.0):
     no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
     optimizer_parameters = [

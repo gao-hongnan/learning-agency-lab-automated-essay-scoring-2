@@ -574,14 +574,16 @@ def main(composer: Composer, state: State) -> None:
         model=model,
         learning_rate=composer.shared.learning_rate,
         weight_decay=composer.shared.weight_decay,
-        layerwise_learning_rate_decay=0.95,
+        layerwise_learning_rate_decay_mulitplier=0.95,
     )
+    pprint(grouped_optimizer_params)
     optimizer = torch.optim.AdamW(
         grouped_optimizer_params,
         lr=composer.shared.learning_rate,
         eps=composer.shared.adam_epsilon,
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
     )
+    pprint(optimizer)
     trainer = Trainer(
         model=model,
         args=training_args,
