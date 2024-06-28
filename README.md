@@ -119,21 +119,37 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 -   https://github.com/huggingface/transformers/blob/main/examples/pytorch/text-classification/run_classification.py
 -   https://huggingface.co/docs/peft/main/en/task_guides/semantic_segmentation_lora
 
-# Tricks and Strategies
+### Pooling And Transformers Representations
 
-## Stratified(Group)KFold
+-   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
+-   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
+-   https://www.kaggle.com/code/rhtsingh/on-stability-of-few-sample-transformer-fine-tuning?scriptVersionId=67176591&cellId=15
 
+## Resampling
+
+### Stratified(Group)KFold
+
+-   As usual, cross validation is done here. Note that there are potential
+    groups, so to avoid data leakage we may also consider using `GroupKFold` or
+    `StratifiedGroupKFold` from `sklearn.model_selection`.
 -   [https://www.kaggle.com/code/emiz6413/predict-the-prompts](https://www.kaggle.com/code/emiz6413/predict-the-prompts)
     -   help us group the `essay_id` to 7 unique `prompt_name`.
+
+## Tricks
+
+### Grad/Activation Monitor
+
+To combat init weights.
+
+### Reinitialize Encoder/Decoder In Backbone
+
+See
+https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 
 ## Optimized Threshold For Regression
 
 -   [https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279](https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2/discussion/502279)
 -   https://www.kaggle.com/code/cdeotte/rapids-svr-starter-cv-0-830-lb-0-804#Find-QWK-Thresholds
-
-## Pooling
-
--   [https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently](https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently)
 
 ## Loss, Combined Loss, Auxiliary Loss etc
 
@@ -157,11 +173,7 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 
 ## References
 
-### Transformers Representations
-
--   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
 -   https://www.kaggle.com/code/vad13irt/optimization-approaches-for-transformers
--   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
 
 ### Profiling
 

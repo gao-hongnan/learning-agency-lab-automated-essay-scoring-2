@@ -8,6 +8,91 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Model, D
 from .pooling import ContextPooler
 
 
+class RMSELoss(nn.Module):
+    """
+    Code taken from Y Nakama's notebook (https://www.kaggle.com/code/yasufuminakama/fb3-deberta-v3-base-baseline-train)
+    """
+
+    def __init__(self, reduction: str = "mean", eps: float = 1e-9) -> None:
+        super().__init__()
+        self.mse = nn.MSELoss(reduction="none")
+        self.reduction = reduction
+        self.eps = eps
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        loss = torch.sqrt(self.mse(logits, targets) + self.eps)
+        if self.reduction == "none":
+            loss = loss
+        elif self.reduction == "sum":
+            loss = loss.sum()
+        elif self.reduction == "mean":
+            loss = loss.mean()
+        return loss
+
+
+class SmoothL1WithMSE(nn.Module):
+    def __init__(self, second_loss: str = "mse", reduction: str = "mean", eps: float = 1e-9) -> None:
+        super().__init__()
+        self.smooth_l1 = nn.SmoothL1Loss(reduction=reduction)
+        self.eps = eps
+
+        if second_loss == "rmse":
+            self.second_loss = RMSELoss(reduction=reduction)
+        elif second_loss == "mse":
+            self.second_loss = nn.MSELoss(reduction=reduction)
+        else:
+            raise ValueError("second_loss must be 'rmse' or 'mse'")
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        smooth_l1_loss = self.smooth_l1(logits, targets)
+        second_loss = self.second_loss(logits, targets)
+        combined_loss: torch.Tensor = (smooth_l1_loss + second_loss) / 2
+        return combined_loss
+
+
+class OrdinalRegressionLoss(nn.Module):
+    def __init__(self, num_classes: int, init_cutpoints: str = "ordered") -> None:
+        """
+        Initialize the ordinal regression loss module with custom class count and initial cutpoints.
+
+        Parameters:
+        - num_classes: Total number of ordinal classes.
+        - init_cutpoints: Initial values for the cutpoints between classes, should have length num_classes - 1.
+        """
+        super().__init__()
+        self.num_classes = num_classes
+
+        if init_cutpoints == "ordered":
+            # Initialize cutpoints to be ordered and centered around zero
+            num_cutpoints = num_classes - 1
+            cutpoints = torch.arange(num_cutpoints).float() - num_cutpoints / 2
+        else:
+            raise ValueError(f"{init_cutpoints} is not a valid init_cutpoints type")
+        self.cutpoints = nn.Parameter(cutpoints.clone().detach().requires_grad_(True))
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """
+        Applies ordinal regression loss using learned cutpoints.
+
+        Parameters:
+        - logits: Predicted logits, assumed to be real values from which thresholds are derived.
+        - targets: True labels, shape (batch_size,)
+
+        Returns:
+        - Loss value
+        """
+
+        # Ensure logits are offset by cutpoints to form cumulative logits
+        cumulative_logits = logits.unsqueeze(1) - self.cutpoints.unsqueeze(0).to(logits.device)
+
+        # Vectorized creation of cumulative targets
+        cum_targets = (targets.unsqueeze(1) > torch.arange(self.num_classes - 1).to(logits.device)).float()
+
+        # Apply binary cross-entropy loss on cumulative logits
+        loss = F.binary_cross_entropy_with_logits(cumulative_logits, cum_targets, reduction="mean")
+        return loss
+
+
 class RegLossForClassification(nn.Module):
     def __init__(self, alpha: float = 0.35) -> None:
         super().__init__()
@@ -174,25 +259,3 @@ class FocalLoss(nn.Module):
             weight=self.weight,
             reduction=self.reduction,
         )
-
-
-class RMSELoss(nn.Module):
-    """
-    Code taken from Y Nakama's notebook (https://www.kaggle.com/code/yasufuminakama/fb3-deberta-v3-base-baseline-train)
-    """
-
-    def __init__(self, reduction="mean", eps=1e-9):
-        super().__init__()
-        self.mse = nn.MSELoss(reduction="none")
-        self.reduction = reduction
-        self.eps = eps
-
-    def forward(self, predictions, targets):
-        loss = torch.sqrt(self.mse(predictions, targets) + self.eps)
-        if self.reduction == "none":
-            loss = loss
-        elif self.reduction == "sum":
-            loss = loss.sum()
-        elif self.reduction == "mean":
-            loss = loss.mean()
-        return loss

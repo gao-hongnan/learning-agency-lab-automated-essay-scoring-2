@@ -58,14 +58,14 @@ logger = logging.getLogger(__name__)
 #             embedding_module = self.backbone.embed_tokens
 #             self.freeze_layers(embedding_module)
 
-#         if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
+#         if self.composer.shared.freeze_these_layers_indices is not None and self.composer.shared.freeze_these_layers_indices > 0:  # type: ignore[operator]
 #             logger.info(
 #                 "freezing the first %s layers.",
-#                 self.composer.shared.num_layers_to_freeze,
+#                 self.composer.shared.freeze_these_layers_indices,
 #             )
 #             # Here the first layers are frozen: only remaining last layers will be trained
 #             for layer in self.backbone.layers[
-#                 : self.composer.shared.num_layers_to_freeze
+#                 : self.composer.shared.freeze_these_layers_indices
 #             ]:
 #                 self.freeze_layers(layer)
 

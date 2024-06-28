@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 import pandas as pd
 import torch
 import torch.distributed
+
 # import torchinfo
 from omegaconf import OmegaConf as om
 from omnivault.distributed.core import get_world_size
@@ -27,6 +29,7 @@ from omnivault.utils.train_utils.resampling import create_folds
 from peft import LoraConfig, get_peft_model
 from rich.pretty import pprint
 from sklearn.metrics import cohen_kappa_score
+from torch.utils.data import DataLoader
 from transformers import (
     AddedToken,
     AutoConfig,
@@ -47,11 +50,21 @@ from .conf.config import ALLOW_WANDB, Composer, Shared
 from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
-from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
-from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification, SubclassDebertaV2Config
+from .src.metrics import (
+    compute_metrics_for_classification,
+    compute_metrics_for_ordinal_regression,
+    compute_metrics_for_reg_cls,
+    compute_metrics_for_regression,
+)
+from .src.model_zoo._modeling_deberta_seqcls_v2 import (
+    SubclassedDebertaV2ForSequenceClassification,
+    SubclassDebertaV2Config,
+)
+from .src.model_zoo.optimizer import get_optimizer_grouped_parameters, get_decay_parameter_names
+from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
-from .src.utils import dry_run, jsonify, load_model
+from .src.utils import calculate_class_weights_and_stats, dry_run, jsonify, load_model
 
 logger = get_logger(__name__, level=logging.DEBUG)
 
@@ -150,15 +163,18 @@ def main(composer: Composer, state: State) -> None:
             notes=composer.shared.notes,
             mode=composer.shared.mode,
         )
-    logger.info('train file loading')
+    logger.info("train file loading")
     # NOTE: loading data stuff
     df = pd.read_csv(composer.shared.train_filepath)
     logger.debug("DataFrame columns: %s, Shape: %s", df.columns.tolist(), df.shape)
 
     df = process_labels(df, task=composer.shared.task)
-    
+
+    class_statistics = calculate_class_weights_and_stats(df["label"].values)
+    pprint(class_statistics)
+
     if composer.shared.topics_map_filepath:
-        logger.info('topic id added')
+        logger.info("topic id added")
         df = merge_topic_info_to_df(
             df,
             train_topic_filepath=composer.shared.train_topic_filepath,
@@ -167,7 +183,7 @@ def main(composer: Composer, state: State) -> None:
         pprint(df.topics)
 
     if composer.shared.group_by:
-        logger.info('group by added')
+        logger.info("group by added")
         df = add_prompt_name_group(
             df,
             pd.read_csv(composer.shared.predicted_prompt_filepath),
@@ -216,6 +232,7 @@ def main(composer: Composer, state: State) -> None:
         cache_dir=composer.shared.cache_dir,
         padding_side=composer.shared.padding_side,
     )
+    pprint(tokenizer)
     logger.info("Base Tokenizer vocab size: %s", len(tokenizer))
     if tokenizer.pad_token is None:
         logger.warning("Tokenizer does not have a `pad_token`. Setting it to `eos_token`!?")
@@ -272,7 +289,9 @@ def main(composer: Composer, state: State) -> None:
     base_model_config.enable_gradient_checkpointing = composer.shared.enable_gradient_checkpointing
     base_model_config.init_config = composer.shared.init_config
     base_model_config.reinitialize_n_layers_of_backbone = composer.shared.reinitialize_n_layers_of_backbone
-    
+    base_model_config.freeze_embeddings = composer.shared.freeze_embeddings
+    base_model_config.freeze_these_layers_indices = composer.shared.freeze_these_layers_indices
+
     base_model_config.cls_type = composer.shared.cls_type
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
@@ -291,10 +310,10 @@ def main(composer: Composer, state: State) -> None:
         raise ValueError(f"Unsupported task type: {composer.shared.task}")
 
     if base_model_config.pad_token_id is None or base_model_config.pad_token_id != tokenizer.pad_token_id:
-        logger.warning("Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`.")
-        base_model_config.pad_token_id = (
-            tokenizer.pad_token_id
-        )  # see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined
+        logger.warning(
+            "Setting the `base_model_config`'s `pad_token_id` to `tokenizer.pad_token_id`. see https://stackoverflow.com/questions/68084302/assertionerror-cannot-handle-batch-sizes-1-if-no-padding-token-is-defined"
+        )
+        base_model_config.pad_token_id = tokenizer.pad_token_id
 
     pprint(base_model_config)
 
@@ -349,7 +368,7 @@ def main(composer: Composer, state: State) -> None:
     try:
         # logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
         logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier)
-        
+
     except AttributeError as exc:
         raise ValueError("Model does not have `classifier` attribute.") from exc
 
@@ -446,6 +465,14 @@ def main(composer: Composer, state: State) -> None:
     total_valid_samples = len(tokenized_valid_dataset) if tokenized_valid_dataset else 0
     local_world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     world_size = get_world_size() if torch.distributed.is_available() and torch.distributed.is_initialized() else 1
+    train_dataloader = DataLoader(  # NOTE: this is for computing and confirming the train steps statistics
+        tokenized_train_dataset,
+        batch_size=composer.shared.per_device_train_batch_size,
+        shuffle=True,
+        num_workers=composer.shared.dataloader_num_workers,
+        pin_memory=True,
+    )
+    len_train_dataloader = len(train_dataloader)
 
     # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
     if composer.shared.desired_effective_batch_size < composer.shared.per_device_train_batch_size:
@@ -460,7 +487,12 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.per_device_train_batch_size * composer.shared.gradient_accumulation_steps * world_size
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
-    total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs
+    total_train_steps_per_epoch = max(total_train_steps_per_epoch, 1)
+    expected_steps = len_train_dataloader // composer.shared.gradient_accumulation_steps
+    assert abs(total_train_steps_per_epoch - expected_steps) <= 1
+
+    total_train_steps = math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
+    assert total_train_steps == math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
 
     if IS_DEBUG:
         composer.shared.logging_steps = total_train_steps // 2
@@ -488,6 +520,8 @@ def main(composer: Composer, state: State) -> None:
     )
 
     statistics = Statistics(
+        len_train_dataloader=len_train_dataloader,
+        class_statistics=class_statistics,
         total_train_samples=total_train_samples,
         total_valid_samples=total_valid_samples,
         effective_train_batch_size=effective_train_batch_size,
@@ -548,18 +582,71 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(training_args)
 
+    # NOTE: METRICS SHENANIGANS
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         if composer.shared.criterion == "reg_cls_loss":
             compute_metrics = compute_metrics_for_reg_cls
         else:
             compute_metrics = compute_metrics_for_classification
     elif composer.shared.task == "REGRESSION":
-        compute_metrics = compute_metrics_for_regression
+        if composer.shared.criterion == "ordinal_reg_loss":
+            compute_metrics = compute_metrics_for_ordinal_regression
+        else:
+            compute_metrics = compute_metrics_for_regression
     else:
         compute_metrics = None
 
     model = base_model_with_adapter if composer.shared.use_lora else base_model
     pprint(model)
+
+    # NOTE: OPTIMIZER SHENANIGANS
+    grouped_optimizer_params = get_optimizer_grouped_parameters(
+        model=model,
+        learning_rate=composer.shared.learning_rate,
+        weight_decay=composer.shared.weight_decay,
+        layerwise_learning_rate_decay_mulitplier=0.95,
+    )
+    # pprint(grouped_optimizer_params)
+
+    HF_DEFAULT_DECAY = get_decay_parameter_names(model=model)
+    HF_DEFAULT_OPTIMIZER_GROUP = [
+        {
+            "params": [
+                parameter
+                for parameter_name, parameter in model.named_parameters()
+                if (parameter_name in HF_DEFAULT_DECAY and parameter.requires_grad)
+            ]
+        },
+        {
+            "params": [
+                parameter
+                for parameter_name, parameter in model.named_parameters()
+                if parameter_name not in HF_DEFAULT_DECAY and parameter.requires_grad
+            ]
+        },
+    ]
+
+    optimizer = torch.optim.AdamW(
+        HF_DEFAULT_OPTIMIZER_GROUP if not composer.shared.very_custom_optimizer_group else grouped_optimizer_params,
+        lr=composer.shared.learning_rate,
+        eps=composer.shared.adam_epsilon,
+        betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
+        weight_decay=composer.shared.weight_decay,
+    )
+    pprint(optimizer)
+
+    scheduler = get_scheduler(
+        name=composer.shared.lr_scheduler_type,
+        optimizer=optimizer,
+        num_warmup_steps=composer.shared.warmup_steps
+        if composer.shared.warmup_steps and composer.shared.warmup_steps > 0
+        else get_warmup_steps_from_ratio(
+            total_train_steps=total_train_steps,
+            warmup_ratio=composer.shared.warmup_ratio,
+        ),
+        num_training_steps=total_train_steps,
+        scheduler_specific_kwargs=composer.shared.scheduler_specific_kwargs,
+    )
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -567,6 +654,7 @@ def main(composer: Composer, state: State) -> None:
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_valid_dataset,
         compute_metrics=compute_metrics,
+        optimizers=(optimizer, scheduler),
     )
 
     if composer.shared.do_train:
@@ -584,6 +672,7 @@ def main(composer: Composer, state: State) -> None:
 
         trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)  # if None is no ops
         torch.cuda.empty_cache()
+
         trainer.save_model(output_dir=composer.shared.output_dir)
         trainer.save_state()
         tokenizer.save_pretrained(composer.shared.output_dir)
@@ -598,24 +687,22 @@ def main(composer: Composer, state: State) -> None:
         run.finish()
 
     if composer.shared.do_eval:
-        y_true = valid_df["score"].values
+        y_trues = valid_df.score.values
 
         if composer.shared.task == "REGRESSION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
-            predictions = logits.round(0) + 1
             valid_df["logits"] = logits + 1
             qwk = cohen_kappa_score(
-                valid_df.score.values,
+                y_trues,
                 valid_df.logits.values.clip(1, 6).round(0),
                 weights="quadratic",
             )
         elif composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
             logits = trainer.predict(tokenized_valid_dataset).predictions
-            predictions = logits.argmax(axis=1) + 1
             columns = [f"p{x}" for x in range(composer.shared.num_labels)]
             valid_df[columns] = logits
             qwk = cohen_kappa_score(
-                valid_df.score.values,
+                y_trues,
                 valid_df.iloc[:, -6:].values.argmax(axis=1) + 1,
                 weights="quadratic",
             )
@@ -665,7 +752,6 @@ def main(composer: Composer, state: State) -> None:
                     print(f"preds[:8]={preds}, ", end="")
 
             qwk = cohen_kappa_score(valid_df.score.values, preds, weights="quadratic")
-            print(f"Validation QWK Score = {qwk}")
 
     valid_df.to_csv(
         f"{str(composer.shared.output_dir)}/valid_df_fold_{composer.shared.fold}.csv",
@@ -679,9 +765,9 @@ def main(composer: Composer, state: State) -> None:
     state.hf_tokenizer_kwargs = tokenizer.init_kwargs
     state.statistics = statistics
 
-    # if composer.shared.verbose:
-    #     pprint(composer)
-    #     pprint(state)
+    if composer.shared.verbose:
+        pprint(composer.shared.freeze_these_layers_indices)
+        pprint(state)
 
     with open(f"{str(composer.shared.output_dir)}/composer.json", "w") as f:
         composer.shared.torch_dtype = str(composer.shared.torch_dtype)
@@ -694,12 +780,13 @@ if __name__ == "__main__":
 
     yaml_cfg = load_yaml_config(yaml_path)
     cfg = merge_configs(yaml_cfg, args_list)
+    # cfg = om.to_container(cfg, resolve=True)
     om.resolve(cfg)  # inplace ops
 
     composer = Composer(shared=Shared(**cfg.shared))
     state = State()
     pprint(composer)
-    
+
     pprint(state)
     # NOTE: base composer is basically an immutable copy of composer where the
     # base configurations provided by user are stored. Why this? Cause in ml,
@@ -719,24 +806,6 @@ if __name__ == "__main__":
     main(composer, state)
 
 """
-# DEBERTA DEBUG
-
-python -m learning_agency_lab_automated_essay_scoring_2.entrypoint_w_hf_trainer \
-learning_agency_lab_automated_essay_scoring_2/config.yaml \
-task=SINGLE_LABEL_CLASSIFICATION \
-shared.job_type=debug \
-shared.train_filepath=learning_agency_lab_automated_essay_scoring_2/data/train.csv \
-shared.external_data_filepath=learning_agency_lab_automated_essay_scoring_2/data/persuade_2.0_human_scores_demo_id_github.csv \
-shared.use_lora=False \
-shared.pretrained_model_name_or_path=microsoft/deberta-v3-small \
-shared.task_type='SEQ_CLS' \
-shared.target_modules='["query_proj", "key_proj", "value_proj"]' \
-shared.modules_to_save='["classifier"]' \
-shared.target_artifacts_dir=learning_agency_lab_automated_essay_scoring_2/artifacts \
-shared.metric_for_best_model='eval_qwk' \
-shared.greater_is_better=True \
-shared.lr_scheduler_type='cosine'
-
  {'eval_qwk': -0.15267175572519087, 'eval_loss': 1.4653687477111816}
 {'train_loss': 1.60413059592247}
 Validation QWK Score = -0.08688309251266646

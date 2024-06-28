@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import Any
+
+import torch
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config
 
-from .criterion import RegLossForClassification
+from .criterion import OrdinalRegressionLoss, RegLossForClassification, SmoothL1WithMSE
 from .pooling import AttentionPooler, ContextPooler, GemPooler, MeanPooler
 from .ordinal_loss import CumulativeLinkLoss
+
 
 def get_pooler(config: DebertaV2Config) -> nn.Module:
     """Factory method to get pooler based on the config."""
@@ -34,19 +38,32 @@ def get_pooler(config: DebertaV2Config) -> nn.Module:
         raise ValueError(f"Pooler {config.pooler_type} is not supported.")
 
 
+def get_optimizer(optimizer_type: str, model: nn.Module, **kwargs: Any) -> torch.optim.Optimizer:
+    """Factory method to get optimizer based on the config."""
+
+    if optimizer_type == "adamw":
+        return torch.optim.AdamW(model.parameters(), **kwargs)
+
+
 def get_loss(config: DebertaV2Config) -> nn.Module:
     """Factory method to get loss based on the config."""
     if config.criterion is None:
         if config.problem_type == "regression":
             return MSELoss(**config.criterion_config)
         if config.problem_type == "single_label_classification":
-            return CrossEntropyLoss(**config.criterion_config)
+            if config.criterion_config.get("weight", None) is not None:
+                # NOTE: to solve json not serializable issue we pop the weight.
+                weight = torch.as_tensor(config.criterion_config.pop("weight"))
+            return CrossEntropyLoss(weight=weight, **config.criterion_config)
         if config.problem_type == "multi_label_classification":
             return BCEWithLogitsLoss(**config.criterion_config)
 
     if config.criterion == "mse":
         return MSELoss(**config.criterion_config)
     if config.criterion == "cross_entropy":
+        if config.criterion_config.get("weight", None) is not None:
+            # NOTE: to solve json not serializable issue we pop the weight.
+            weight = torch.as_tensor(config.criterion_config.pop("weight"))
         return CrossEntropyLoss(**config.criterion_config)
     if config.criterion == "bce":
         return BCEWithLogitsLoss(**config.criterion_config)
@@ -55,8 +72,8 @@ def get_loss(config: DebertaV2Config) -> nn.Module:
     if config.criterion == "huber":
         # see intuition: https://www.kaggle.com/code/emiz6413/cv-0-825-lb-0-803-deberta-v3-small-with-huber-loss
         return nn.HuberLoss(**config.criterion_config)
-
-    if config.criterion == "ordinal_loss":
-        return CumulativeLinkLoss(num_classes=6)
-        
+    if config.criterion == "ordinal_reg_loss":
+        return OrdinalRegressionLoss(**config.criterion_config)
+    if config.criterion == "smooth_l1_with_mse":
+        return SmoothL1WithMSE(**config.criterion_config)
     raise ValueError(f"Criterion {config.criterion} is not supported.")

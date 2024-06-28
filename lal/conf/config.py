@@ -214,10 +214,13 @@ class Shared(BaseModel):
     pooler_config: dict[str, Any] = {}
 
     cls_type: str = "vanilla"
-    
+
     # criterion
-    criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber", "ordinal_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
+    criterion: Literal["mse", "cross_entropy", "bce","smooth_l1_with_mse", "reg_cls_loss", "huber", "ordinal_loss", "ordinal_reg_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
     criterion_config: dict[str, Any] = {}
+
+    # optimizer
+    # optimizer_type
 
     # init config
     init_config: dict[str, Any] = {}
@@ -242,7 +245,7 @@ class Shared(BaseModel):
     enable_gradient_checkpointing: bool = False
 
     # freeze
-    num_layers_to_freeze: int | None = None
+    freeze_these_layers_indices: List[int] | None = None
     freeze_embeddings: bool = False
 
     # classification/regression
@@ -326,6 +329,9 @@ class Shared(BaseModel):
     base_learning_rate: float = 6.25e-06 # this works ok for lm 5e-5 # we derive the real lr later.
     desired_effective_batch_size: int = 16 # this means no matter how many gpus, world size or what not, you want a 16 global batch size.
     enable_mixed_precision: bool = True
+    scheduler_specific_kwargs: dict[str, Any] = {}
+    very_custom_optimizer_group: bool = False
+    layer_wise_learning_rate_decay: float | None = Field(default=None)
     # fmt: on
 
     class Config:

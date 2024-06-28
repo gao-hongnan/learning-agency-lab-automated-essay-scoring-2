@@ -4,8 +4,9 @@ import logging
 from typing import Any, Tuple
 
 import torch
-from torch import nn
+from omnivault.utils.torch_utils.model_utils import Freezer
 from rich.pretty import pprint
+from torch import nn
 from transformers.modeling_outputs import BaseModelOutput, SequenceClassifierOutput
 from transformers.models.deberta_v2.modeling_deberta_v2 import (
     DebertaV2Config,
@@ -16,7 +17,7 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import (
 
 from ..logger import get_logger
 from .factory import get_loss, get_pooler
-from omnivault.utils.torch_utils.model_utils import get_named_modules
+
 logger = get_logger(__name__, level=logging.DEBUG)
 
 
@@ -156,6 +157,18 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     """We can overload deberta's config with `criterion` and `pooler_type` along
     maybe with `loss_config` and `pooler_config` to customize the loss and pooler
     for the sequence classification task.
+
+    Notes
+    -----
+    [1] `if self.config.reinitialize_n_layers_of_backbone > 0: ...`
+        We are reinit weights of backbone's encoder so only works for deberta/bert
+        with an encoder layer named `layer` attribute. If want to use on other
+        models, just change the attribute name. But what are we doing here?
+        The reason is we load from pre-trained, and sometimes we may want to
+        reset/recalibrate the weights of the backbone (i.e. last N BLOCK)
+        for stable training. Note this is not reinit pooler or classifier since
+        they will be reinitialised anyways! So if we want init last 3 BLOCK of layers
+        then we can set `reinitialize_n_layers_of_backbone=3` in config.
     """
 
     def __init__(self, config: SubclassDebertaV2Config) -> None:
@@ -166,38 +179,25 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         # 1. LOAD BACKBONE
         self.deberta = DebertaV2Model(config)  # NOTE: alias=self.backbone
+        self.freezer = Freezer(self.deberta)
 
         if self.config.enable_gradient_checkpointing:
             logger.info("Enabling gradient checkpointing.")
             self.deberta.gradient_checkpointing_enable()
 
-        #         if self.composer.shared.freeze_embeddings:
-        #             logger.info("freezing embeddings.")
-        #             embedding_module = self.backbone.embed_tokens
-        #             self.freeze_layers(embedding_module)
+        if self.config.freeze_embeddings:
+            logger.info("freezing embeddings.")
+            embedding_module = self.deberta.embeddings
+            self.freezer.freeze_by_module(embedding_module)
 
-        #         if self.composer.shared.num_layers_to_freeze is not None and self.composer.shared.num_layers_to_freeze > 0:  # type: ignore[operator]
-        #             logger.info(
-        #                 "freezing the first %s layers.",
-        #                 self.composer.shared.num_layers_to_freeze,
-        #             )
-        #             # Here the first layers are frozen: only remaining last layers will be trained
-        #             for layer in self.backbone.layers[
-        #                 : self.composer.shared.num_layers_to_freeze
-        #             ]:
-        #                 self.freeze_layers(layer)
+        if self.config.freeze_these_layers_indices:  # [1, 2]
+            logger.info("freezing the specified layers %s.", self.config.freeze_these_layers_indices)
+            self.freezer.freeze_by_index(self.config.freeze_these_layers_indices, "encoder.layer")
 
-        # NOTE: here we are reinit weights of backbone's encoder so only works for deberta/bert
-        # , perhaps you may ask why?
-        # The reason is we load from pre-trained, and sometimes we may want to
-        # reset/recalibrate the weights of the backbone (i.e. last N BLOCK)
-        # for stable training. Note this is not reinit pooler or classifier since
-        # they will be reinitialised anyways! So if we want init last 3 BLOCK of layers
-        # then we can set `reinitialize_n_layers_of_backbone=3` in config.
+        pprint(self.freezer.report_freezing())
+
         if self.config.reinitialize_n_layers_of_backbone > 0:
-            for module in self.deberta.encoder.layer[
-                -self.config.reinitialize_n_layers_of_backbone :
-            ]:
+            for module in self.deberta.encoder.layer[-self.config.reinitialize_n_layers_of_backbone :]:
                 logger.info("Reinitializing weights of %s", module.__class__.__name__)
                 self._init_weights(module)
 
@@ -283,6 +283,8 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = self._get_loss()
+            loss_fct = loss_fct.to(logits.device)
+
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())

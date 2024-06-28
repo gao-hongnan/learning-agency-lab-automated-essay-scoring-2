@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Dict, List
 
+import numpy as np
 import torch
+from sklearn.utils.class_weight import compute_class_weight
 from transformers import (
     AutoModel,
     AutoModelForCausalLM,
@@ -15,10 +17,51 @@ from transformers import (
     PreTrainedTokenizerBase,
     PreTrainedTokenizerFast,
 )
+from transformers.optimization import AdamW
 
 from .logger import get_logger
 
 logger = get_logger(__name__, level=logging.DEBUG)
+
+
+def calculate_class_weights_and_stats(y_train: List[int]) -> Dict[str, Any]:
+    """
+    Calculate class counts, class weights, and return relevant statistics.
+
+    Args:
+        y_train (List[int]): List of class labels in the training set.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing class counts, class weights,
+                        and statistics such as mean, median, and std of class counts.
+    """
+    # Calculate class counts
+    classes, class_counts = np.unique(y_train, return_counts=True)
+
+    # Calculate class weights using sklearn's compute_class_weight
+    class_weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
+
+    # Convert class weights to a tensor
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
+
+    # Calculate statistics for class counts
+    class_count_stats = {
+        "mean": np.mean(class_counts),
+        "median": np.median(class_counts),
+        "std": np.std(class_counts),
+        "min": np.min(class_counts),
+        "max": np.max(class_counts),
+    }
+
+    # Compile all information into a dictionary
+    result = {
+        "class_counts": dict(zip(classes, class_counts, strict=False)),
+        "class_weights": dict(zip(classes, class_weights, strict=False)),
+        "class_weights_tensor": class_weights_tensor,
+        "class_count_stats": class_count_stats,
+    }
+
+    return result
 
 
 def jsonify(obj: Any) -> Any:
@@ -129,21 +172,6 @@ def dry_run(model: torch.nn.Module, batch: dict[str, torch.Tensor]) -> dict[str,
         return {"status": "FAILED", "exception": str(exc)}
 
 
-def get_parameters_groups(n_layers, n_groups):
-    layers = [f"backbone.encoder.layer.{n_layers - i - 1}." for i in range(n_layers)]
-    step = math.ceil(n_layers / n_groups)
-    groups = []
-    for i in range(0, n_layers, step):
-        if i + step >= n_layers - 1:
-            group = layers[i:]
-            groups.append(group)
-            break
-        else:
-            group = layers[i : i + step]
-            groups.append(group)
-    return groups
-
-
 def get_grouped_llrd_parameters(model, encoder_lr, decoder_lr, embeddings_lr, lr_mult_factor, weight_decay, n_groups):
     opt_parameters = []
     named_parameters = list(model.named_parameters())
@@ -177,6 +205,59 @@ def get_grouped_llrd_parameters(model, encoder_lr, decoder_lr, embeddings_lr, lr
             or name.startswith("pool")
             or name.startswith("pooling")
         ):
+            lr = decoder_lr
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+    return opt_parameters
+
+
+def get_parameters_groups(n_layers, n_groups):
+    layers = [f"backbone.encoder.layer.{n_layers - i - 1}." for i in range(n_layers)]
+    step = math.ceil(n_layers / n_groups)
+    groups = []
+    for i in range(0, n_layers, step):
+        if i + step >= n_layers - 1:
+            group = layers[i:]
+            groups.append(group)
+            break
+        else:
+            group = layers[i : i + step]
+            groups.append(group)
+    return groups
+
+
+def get_grouped_llrd_parameters(
+    model,
+    encoder_lr,
+    decoder_lr,
+    embeddings_lr,
+    lr_mult_factor,
+    weight_decay,
+    n_groups,
+):
+    opt_parameters = []
+    named_parameters = list(model.named_parameters())
+
+    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
+
+    n_layers = model.backbone_config.num_hidden_layers
+    parameters_groups = get_parameters_groups(n_layers, n_groups)
+
+    for _, (name, params) in enumerate(named_parameters):
+        wd = 0.0 if any(p in name for p in no_decay) else weight_decay
+
+        if name.startswith("backbone.encoder"):
+            lr = encoder_lr
+            for i, group in enumerate(parameters_groups):
+                lr = encoder_lr * (lr_mult_factor ** (i + 1)) if any(p in name for p in group) else lr
+
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+        if name.startswith("backbone.embeddings"):
+            lr = embeddings_lr
+            opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
+
+        if name.startswith("fc") or name.startswith("backbone.pooler"):
             lr = decoder_lr
             opt_parameters.append({"params": params, "weight_decay": wd, "lr": lr})
 
