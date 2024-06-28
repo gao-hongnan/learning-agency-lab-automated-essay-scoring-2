@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # Define the path to save the logs
-LOG_DIR="./artifacts"
 
-mkdir -p $LOG_DIR
 
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 FOLD=0
+
+LOG_DIR="./artifacts/exp-$TIMESTAMP"
+
+mkdir -p $LOG_DIR
 
 nohup sh -c "export ALLOW_WANDB=true && \
 export CUDA_VISIBLE_DEVICES=0 && \
@@ -54,4 +56,4 @@ python -m lal.entrypoint_local \
     shared.default=False \
     shared.criterion=mse \
     shared.reinitialize_n_layers_of_backbone=0 \
-    shared.pooler_type=null" > ./artifacts/exp-$TIMESTAMP/nohup_chris_$fold.log 2>&1 &
+    shared.pooler_type=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
