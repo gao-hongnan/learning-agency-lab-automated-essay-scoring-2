@@ -225,6 +225,7 @@ def main(composer: Composer, state: State) -> None:
         cache_dir=composer.shared.cache_dir,
         padding_side=composer.shared.padding_side,
     )
+    pprint(tokenizer)
     logger.info("Base Tokenizer vocab size: %s", len(tokenizer))
     if tokenizer.pad_token is None:
         logger.warning("Tokenizer does not have a `pad_token`. Setting it to `eos_token`!?")
