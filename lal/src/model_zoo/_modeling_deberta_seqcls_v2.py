@@ -94,6 +94,63 @@ def _init_weights(module: nn.Module, **kwargs: Any) -> None:
         module.bias.data.zero_()
         module.weight.data.fill_(1.0)
 
+class SubclassDebertaV2Config(DebertaV2Config):
+    def __init__(
+        self,
+        vocab_size=128100,
+        hidden_size=1536,
+        num_hidden_layers=24,
+        num_attention_heads=24,
+        intermediate_size=6144,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=0,
+        initializer_range=0.02,
+        layer_norm_eps=1e-7,
+        relative_attention=False,
+        max_relative_positions=-1,
+        pad_token_id=0,
+        position_biased_input=True,
+        pos_att_type=None,
+        pooler_dropout=0,
+        pooler_hidden_act="gelu",
+        cls_type="vanilla",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+        self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
+        self.num_attention_heads = num_attention_heads
+        self.intermediate_size = intermediate_size
+        self.hidden_act = hidden_act
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = type_vocab_size
+        self.initializer_range = initializer_range
+        self.relative_attention = relative_attention
+        self.max_relative_positions = max_relative_positions
+        self.pad_token_id = pad_token_id
+        self.position_biased_input = position_biased_input
+
+        # Backwards compatibility
+        if isinstance(pos_att_type, str):
+            pos_att_type = [x.strip() for x in pos_att_type.lower().split("|")]
+
+        self.pos_att_type = pos_att_type
+        self.vocab_size = vocab_size
+        self.layer_norm_eps = layer_norm_eps
+
+        self.pooler_hidden_size = kwargs.get("pooler_hidden_size", hidden_size)
+        self.pooler_dropout = pooler_dropout
+        self.pooler_hidden_act = pooler_hidden_act
+
+        self.cls_type = cls_type,
+
+
 
 class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     """We can overload deberta's config with `criterion` and `pooler_type` along
@@ -101,7 +158,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     for the sequence classification task.
     """
 
-    def __init__(self, config: DebertaV2Config) -> None:
+    def __init__(self, config: SubclassDebertaV2Config) -> None:
         super().__init__(config)
 
         num_labels = getattr(config, "num_labels", 2)
@@ -148,8 +205,16 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         self.pooler = get_pooler(config)  # Factory method to get pooler
         output_dim = self.pooler.output_dim
 
+
+        cls_type = getattr(config, "cls_type", "vanilla")
+        self.cls_type = cls_type
         # 3. LOAD REGRESSOR/CLASSIFIER HEAD
-        self.classifier = nn.Linear(output_dim, num_labels)  # NOTE: alias=self.head
+        if self.cls_type == "vanilla":
+            self.classifier = nn.Linear(output_dim, num_labels)  # NOTE: alias=self.head
+        
+        if self.cls_type == "topic_id_cls":
+            num_topics = getattr(config, "num_topics", 7)
+            self.classifier = nn.ModuleList([nn.Linear(self.pooler.output_dim, self.num_labels) for _ in range(num_topics)])
 
         drop_out = getattr(config, "cls_dropout", None)
         drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
@@ -178,6 +243,7 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         attention_mask: torch.Tensor | None = None,
         token_type_ids: torch.Tensor | None = None,
         position_ids: torch.Tensor | None = None,
+        topic_ids: torch.Tensor | None = None,
         inputs_embeds: torch.Tensor | None = None,
         labels: torch.Tensor | None = None,
         output_attentions: bool | None = None,
@@ -207,7 +273,12 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             backbone_outputs=backbone_outputs, _input_ids=input_ids, _attention_mask=attention_mask
         )
         pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+
+        logits = None
+
+        topic_ids = topic_ids.flatten()
+
+        logits = torch.stack([self.classifier[topic_ids[idx]](pooled_output) for idx in range(pooled_output.shape[0])], dim=0)
 
         loss = None
         if labels is not None:

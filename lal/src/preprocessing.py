@@ -64,7 +64,7 @@ def merge_topic_info_to_df(df: pd.DataFrame, train_topic_filepath: str, topics_m
     topics_df = pd.DataFrame(list(topics_dict.items()), columns=["topics", "description"])
     topics_df["topics"] = topics_df["topics"].astype(int)
     final_merged_df = pd.merge(merge_df_and_train_topic, topics_df, on="topics", how="left")
-    final_merged_df = final_merged_df.drop(columns=["topics"])
+    # final_merged_df = final_merged_df.drop(columns=["topics"])
     return final_merged_df
 
 
@@ -138,6 +138,8 @@ def preprocess(
             **kwargs,
         )
         tokenized_sample["labels"] = sample["label"]
+
+        tokenized_sample["topic_ids"] = sample["topics"]
         return tokenized_sample
     else:
         raise ValueError(f"Unsupported task type: {task}")
@@ -175,6 +177,7 @@ def create_dataset(
             "return_tensors": composer.shared.return_tensors,
             "add_special_tokens": composer.shared.add_special_tokens,
         },
+        remove_columns=ds.column_names
     )
     print(ds.column_names)
     columns_to_remove = [
@@ -187,7 +190,9 @@ def create_dataset(
         composer.shared.description,
     ]
     existing_columns = [col for col in columns_to_remove if col in ds.column_names]
-    ds = ds.remove_columns(existing_columns)
+
+    # ds = ds.remove_columns(existing_columns)
+    
     logger.info("Tokenized dataset columns: %s", ds.column_names)
 
     for row in ds.take(1):

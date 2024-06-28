@@ -32,5 +32,6 @@ CUDA_VISIBLE_DEVICES="6,7,8,9" torchrun --nnodes=1 --nproc_per_node=4 -m lal.ent
     shared.desired_effective_batch_size=16 \
     shared.enable_mixed_precision=True \
     shared.default=False \
-    shared.criterion=ordinal_loss \
-    shared.pooler_type=null
+    shared.criterion=mse \
+    shared.pooler_type=null \
+    shared.cls_type=topic_id_cls

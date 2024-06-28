@@ -213,6 +213,8 @@ class Shared(BaseModel):
     pooler_type: Literal["context", "mean", "attention", "gem"] | None = None
     pooler_config: dict[str, Any] = {}
 
+    cls_type: str = "vanilla"
+    
     # criterion
     criterion: Literal["mse", "cross_entropy", "bce", "reg_cls_loss", "huber", "ordinal_loss"] | None = None # ordinal-log-loss, cross-entropy, mse
     criterion_config: dict[str, Any] = {}

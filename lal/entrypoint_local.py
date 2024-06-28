@@ -48,7 +48,7 @@ from .src.callbacks import SaveLoraHeadCallback
 from .src.dataset import load_data
 from .src.logger import get_logger
 from .src.metrics import compute_metrics_for_classification, compute_metrics_for_reg_cls, compute_metrics_for_regression
-from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
+from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification, SubclassDebertaV2Config
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
 from .src.utils import dry_run, jsonify, load_model
@@ -150,25 +150,29 @@ def main(composer: Composer, state: State) -> None:
             notes=composer.shared.notes,
             mode=composer.shared.mode,
         )
-
+    logger.info('train file loading')
     # NOTE: loading data stuff
     df = pd.read_csv(composer.shared.train_filepath)
     logger.debug("DataFrame columns: %s, Shape: %s", df.columns.tolist(), df.shape)
 
     df = process_labels(df, task=composer.shared.task)
-
+    
     if composer.shared.topics_map_filepath:
+        logger.info('topic id added')
         df = merge_topic_info_to_df(
             df,
             train_topic_filepath=composer.shared.train_topic_filepath,
             topics_map_path=composer.shared.topics_map_filepath,
         )
+        pprint(df.topics)
 
     if composer.shared.group_by:
+        logger.info('group by added')
         df = add_prompt_name_group(
             df,
             pd.read_csv(composer.shared.predicted_prompt_filepath),
         )
+
     if composer.shared.external_data_filepath:
         external_df = pd.read_csv(composer.shared.external_data_filepath)
         external_df = process_labels(external_df, task=composer.shared.task, target_column="holistic_essay_score")
@@ -247,7 +251,7 @@ def main(composer: Composer, state: State) -> None:
     else:
         data_collator = DataCollatorForSeq2Seq(tokenizer, padding="longest")
 
-    base_model_config: PretrainedConfig = AutoConfig.from_pretrained(
+    base_model_config: PretrainedConfig = SubclassDebertaV2Config.from_pretrained(
         pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
         force_download=composer.shared.force_download,
         cache_dir=composer.shared.cache_dir,
@@ -268,6 +272,8 @@ def main(composer: Composer, state: State) -> None:
     base_model_config.enable_gradient_checkpointing = composer.shared.enable_gradient_checkpointing
     base_model_config.init_config = composer.shared.init_config
     base_model_config.reinitialize_n_layers_of_backbone = composer.shared.reinitialize_n_layers_of_backbone
+    
+    base_model_config.cls_type = composer.shared.cls_type
 
     if composer.shared.task == "SINGLE_LABEL_CLASSIFICATION":
         base_model_config.problem_type = "single_label_classification"
@@ -341,7 +347,9 @@ def main(composer: Composer, state: State) -> None:
         )
 
     try:
-        logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
+        # logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
+        logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier)
+        
     except AttributeError as exc:
         raise ValueError("Model does not have `classifier` attribute.") from exc
 
@@ -691,6 +699,7 @@ if __name__ == "__main__":
     composer = Composer(shared=Shared(**cfg.shared))
     state = State()
     pprint(composer)
+    
     pprint(state)
     # NOTE: base composer is basically an immutable copy of composer where the
     # base configurations provided by user are stored. Why this? Cause in ml,
