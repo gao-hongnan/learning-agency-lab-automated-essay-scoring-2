@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from omnivault.utils.train_utils.resampling import create_folds
 from peft import LoraConfig, get_peft_model
 from rich.pretty import pprint
 from sklearn.metrics import cohen_kappa_score
+from torch.utils.data import DataLoader
 from transformers import (
     AddedToken,
     AutoConfig,
@@ -55,6 +57,7 @@ from .src.metrics import (
 )
 from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
 from .src.model_zoo.optimizer import get_optimizer_grouped_parameters
+from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
 from .src.utils import calculate_class_weights_and_stats, dry_run, jsonify, load_model
@@ -449,6 +452,14 @@ def main(composer: Composer, state: State) -> None:
     total_valid_samples = len(tokenized_valid_dataset) if tokenized_valid_dataset else 0
     local_world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     world_size = get_world_size() if torch.distributed.is_available() and torch.distributed.is_initialized() else 1
+    train_dataloader = DataLoader(  # NOTE: this is for computing and confirming the train steps statistics
+        tokenized_train_dataset,
+        batch_size=composer.shared.per_device_train_batch_size,
+        shuffle=True,
+        num_workers=composer.shared.dataloader_num_workers,
+        pin_memory=True,
+    )
+    len_train_dataloader = len(train_dataloader)
 
     # need to set the gradient accumulation steps here before the attribute is used in `effective_train_batch_size`
     if composer.shared.desired_effective_batch_size < composer.shared.per_device_train_batch_size:
@@ -463,7 +474,11 @@ def main(composer: Composer, state: State) -> None:
         composer.shared.per_device_train_batch_size * composer.shared.gradient_accumulation_steps * world_size
     )
     total_train_steps_per_epoch = total_train_samples // effective_train_batch_size
-    total_train_steps = total_train_steps_per_epoch * composer.shared.num_train_epochs
+    total_train_steps_per_epoch = max(total_train_steps_per_epoch, 1)
+    assert total_train_steps_per_epoch == len_train_dataloader // composer.shared.gradient_accumulation_steps
+
+    total_train_steps = math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
+    assert total_train_steps == math.ceil(total_train_steps_per_epoch * composer.shared.num_train_epochs)
 
     if IS_DEBUG:
         composer.shared.logging_steps = total_train_steps // 2
@@ -491,6 +506,7 @@ def main(composer: Composer, state: State) -> None:
     )
 
     statistics = Statistics(
+        len_train_dataloader=len_train_dataloader,
         class_statistics=class_statistics,
         total_train_samples=total_train_samples,
         total_valid_samples=total_valid_samples,
@@ -578,12 +594,25 @@ def main(composer: Composer, state: State) -> None:
     )
     pprint(grouped_optimizer_params)
     optimizer = torch.optim.AdamW(
-        grouped_optimizer_params,
+        # grouped_optimizer_params,
+        model.parameters(),
         lr=composer.shared.learning_rate,
         eps=composer.shared.adam_epsilon,
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
     )
     pprint(optimizer)
+
+    scheduler = get_scheduler(
+        name=composer.shared.lr_scheduler_type,
+        optimizer=optimizer,
+        num_warmup_steps=composer.shared.warmup_steps
+        if composer.shared.warmup_steps and composer.shared.warmup_steps > 0
+        else get_warmup_steps_from_ratio(
+            total_train_steps=total_train_steps,
+            warmup_ratio=composer.shared.warmup_ratio,
+        ),
+        num_training_steps=total_train_steps,
+    )
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -591,7 +620,7 @@ def main(composer: Composer, state: State) -> None:
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_valid_dataset,
         compute_metrics=compute_metrics,
-        optimizers=(optimizer, None),
+        optimizers=(optimizer, scheduler),
     )
 
     if composer.shared.do_train:

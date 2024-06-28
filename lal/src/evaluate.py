@@ -1,7 +1,8 @@
+from typing import Any
+
 import pandas as pd
-from typing import Any, Dict, Tuple
 from sklearn.metrics import cohen_kappa_score
-from transformers import PreTrainedTokenizerBase, PreTrainedModel
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 
 def validate_model(

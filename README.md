@@ -137,6 +137,10 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 
 ## Tricks
 
+### Grad/Activation Monitor
+
+To combat init weights.
+
 ### Reinitialize Encoder/Decoder In Backbone
 
 See
