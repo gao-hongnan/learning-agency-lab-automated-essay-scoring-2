@@ -1,8 +1,9 @@
 #!/bin/bash
 
-TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-LOG_DIR="./artifacts/exp1-$TIMESTAMP"
-ARTIFACTS_DIR="/mnt/data/jundazhu/artifacts/exp1-$TIMESTAMP"
+TIMESTAMP=$(date +"%Y-%m-%d-%H-%M-%S")
+GIT_COMMIT_HASH=$(git rev-parse HEAD)
+LOG_DIR="./artifacts/$TIMESTAMP-$GIT_COMMIT_HASH"
+ARTIFACTS_DIR="/mnt/data/jundazhu/artifacts/$TIMESTAMP-$GIT_COMMIT_HASH"
 PID_FILE="$LOG_DIR/pids.txt"
 
 mkdir -p $LOG_DIR
