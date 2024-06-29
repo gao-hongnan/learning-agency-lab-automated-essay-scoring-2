@@ -166,4 +166,4 @@ shared:
   enable_mixed_precision: true
   scheduler_specific_kwargs: {}
   very_custom_optimizer_group: false
-  layer_wise_learning_rate_decay: null
+  layerwise_learning_rate_decay_mulitplier: null

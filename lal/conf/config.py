@@ -330,7 +330,7 @@ class Shared(BaseModel):
     enable_mixed_precision: bool = True
     scheduler_specific_kwargs: dict[str, Any] = {}
     very_custom_optimizer_group: bool = False
-    layer_wise_learning_rate_decay: float | None = Field(default=None)
+    layerwise_learning_rate_decay_mulitplier: float | None = Field(default=None)
     # fmt: on
 
     class Config:

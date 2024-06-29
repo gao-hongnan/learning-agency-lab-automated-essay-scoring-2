@@ -62,7 +62,7 @@ do
         shared.reinitialize_n_layers_of_backbone=1 \
         shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
-        shared.layer_wise_learning_rate_decay=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+        shared.layerwise_learning_rate_decay_mulitplier=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
 
     echo $! >> $PID_FILE
 done

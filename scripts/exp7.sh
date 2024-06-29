@@ -64,7 +64,7 @@ do
         shared.pooler_config.p=3 \
         shared.pooler_config.eps=1e-6 \
         shared.very_custom_optimizer_group=False \
-        shared.layer_wise_learning_rate_decay=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+        shared.layerwise_learning_rate_decay_mulitplier=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
 
     echo $! >> $PID_FILE
 done

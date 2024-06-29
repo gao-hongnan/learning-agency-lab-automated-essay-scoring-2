@@ -48,7 +48,7 @@ python -m lal.entrypoint_local \
         shared.reinitialize_n_layers_of_backbone=0 \
         shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
-        shared.layer_wise_learning_rate_decay=null
+        shared.layerwise_learning_rate_decay_mulitplier=null
 
 # INFO: 2024-06-25 08:36:49,293: __main__  Sanity Check Last Layer Weights: -0.004328871
 # INFO: 2024-06-25 08:36:49,358: __main__  Collated sample batch keys: dict_keys(['input_ids', 'token_type_ids', 'attention_mask', 'labels'])

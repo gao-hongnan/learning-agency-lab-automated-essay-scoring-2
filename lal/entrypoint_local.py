@@ -59,7 +59,11 @@ from .src.model_zoo._modeling_deberta_seqcls_v2 import (
     SubclassedDebertaV2ForSequenceClassification,
     SubclassedDebertaV2ForSequenceClassificationMultiHead,
 )
-from .src.model_zoo.optimizer import get_decay_parameter_names, get_optimizer_grouped_parameters
+from .src.model_zoo.optimizer import (
+    get_decay_parameter_names,
+    get_optimizer_grouped_parameters_by_layer,
+    get_optimizer_grouped_parameters_by_category,
+)
 from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
 from .src.state import State, Statistics
@@ -605,13 +609,18 @@ def main(composer: Composer, state: State) -> None:
     pprint(model)
 
     # NOTE: OPTIMIZER SHENANIGANS
-    grouped_optimizer_params = get_optimizer_grouped_parameters(
+    grouped_optimizer_params = get_optimizer_grouped_parameters_by_layer(
         model=model,
-        learning_rate=composer.shared.learning_rate,
-        weight_decay=composer.shared.weight_decay,
-        layerwise_learning_rate_decay_mulitplier=0.95,
+        group_configs=[
+            {"prefix": "deberta.encoder", "base_lr": 1e-5, "llrd": True},
+            {"prefix": "deberta.embeddings", "base_lr": 9e-6, "llrd": False},
+            {"prefix": "pooler", "base_lr": composer.shared.learning_rate, "llrd": False},
+            {"prefix": "classifier", "base_lr": composer.shared.learning_rate, "llrd": False},
+        ],
+        default_learning_rate=composer.shared.learning_rate,
+        default_weight_decay=composer.shared.weight_decay,
+        layerwise_learning_rate_decay_mulitplier=composer.shared.layerwise_learning_rate_decay_mulitplier,
     )
-    # pprint(grouped_optimizer_params)
 
     HF_DEFAULT_DECAY = get_decay_parameter_names(model=model)
     HF_DEFAULT_OPTIMIZER_GROUP = [
