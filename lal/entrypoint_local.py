@@ -61,7 +61,6 @@ from .src.model_zoo._modeling_deberta_seqcls_v2 import (
 )
 from .src.model_zoo.optimizer import (
     get_decay_parameter_names,
-    get_optimizer_grouped_parameters_by_layer,
     get_optimizer_grouped_parameters_by_category,
 )
 from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
