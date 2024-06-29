@@ -64,7 +64,7 @@ def merge_topic_info_to_df(df: pd.DataFrame, train_topic_filepath: str, topics_m
     topics_df = pd.DataFrame(list(topics_dict.items()), columns=["topics", "description"])
     topics_df["topics"] = topics_df["topics"].astype(int)
     final_merged_df = pd.merge(merge_df_and_train_topic, topics_df, on="topics", how="left")
-    final_merged_df = final_merged_df.drop(columns=["topics"])
+    # final_merged_df = final_merged_df.drop(columns=["topics"])
     return final_merged_df
 
 

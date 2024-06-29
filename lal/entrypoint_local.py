@@ -371,7 +371,7 @@ def main(composer: Composer, state: State) -> None:
     try:
         logger.info("Sanity Check Last Layer Weights: %s", base_model.classifier.weight[0][0].detach().cpu().numpy())
     except AttributeError as exc:
-        raise ValueError("Model does not have `classifier` attribute.") from exc
+        logger.exception(msg="Model does not have `classifier` attribute?", exc_info=exc)
 
     # NOTE: get named modules and try to derive the last module name
     base_model_named_modules = get_named_modules(base_model)
