@@ -48,7 +48,7 @@ do
         shared.metric_for_best_model=eval_qwk \
         shared.num_train_epochs=5 \
         shared.optim=adamw_torch \
-        shared.per_device_train_batch_size=8 \
+        shared.per_device_train_batch_size=4 \
         shared.per_device_eval_batch_size=16 \
         shared.report_to=wandb \
         shared.save_strategy=epoch \
