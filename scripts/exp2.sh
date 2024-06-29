@@ -56,8 +56,8 @@ do
         shared.weight_decay=0.01 \
         shared.desired_effective_batch_size=8 \
         shared.enable_mixed_precision=True \
-        shared.model_type=SubclassedDebertaV2ForSequenceClassificationMultiHead \
-        shared.criterion=mse \
+        shared.model_type=SubclassedDebertaV2ForSequenceClassification \
+        shared.criterion=smooth_l1_with_mse \
         shared.reinitialize_n_layers_of_backbone=0 \
         shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
