@@ -423,7 +423,7 @@ python -m lal.entrypoint_local \
 
 
 export ALLOW_WANDB=true && \
-export CUDA_VISIBLE_DEVICES=7 && \
+export CUDA_VISIBLE_DEVICES=6 && \
 python -m lal.entrypoint_local \
     lal/conf/deberta_reg.yaml \
     shared.task=REGRESSION \
@@ -433,6 +433,7 @@ python -m lal.entrypoint_local \
     shared.resample_params.n_splits=5 \
     shared.resample_params.shuffle=true \
     shared.resample_params.random_state=42 \
+    shared.topics="topics" \
     shared.fold=2 \
     shared.padding_side=right \
     shared.max_length=1024 \
@@ -448,7 +449,7 @@ python -m lal.entrypoint_local \
     shared.data_seed=null \
     shared.eval_strategy=epoch \
     shared.greater_is_better=True \
-    shared.learning_rate=1e-5 \
+    shared.learning_rate=3e-5 \
     shared.load_best_model_at_end=True \
     shared.logging_first_step=True \
     shared.lr_scheduler_type=linear \
@@ -470,5 +471,6 @@ python -m lal.entrypoint_local \
     shared.reinitialize_n_layers_of_backbone=0 \
     shared.pooler_type=null \
     shared.very_custom_optimizer_group=False \
-    shared.layer_wise_learning_rate_decay=null \
-    shared.cls_type=topic_id_cls
+    shared.layer_wise_learning_rate_decay=0.95 \
+    shared.cls_type=topic_id_cls \
+    shared.very_custom_optimizer_group=True
