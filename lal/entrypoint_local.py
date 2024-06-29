@@ -55,7 +55,10 @@ from .src.metrics import (
     compute_metrics_for_reg_cls,
     compute_metrics_for_regression,
 )
-from .src.model_zoo._modeling_deberta_seqcls_v2 import SubclassedDebertaV2ForSequenceClassification
+from .src.model_zoo._modeling_deberta_seqcls_v2 import (
+    SubclassedDebertaV2ForSequenceClassification,
+    SubclassedDebertaV2ForSequenceClassificationMultiHead,
+)
 from .src.model_zoo.optimizer import get_optimizer_grouped_parameters, get_decay_parameter_names
 from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
@@ -170,6 +173,7 @@ def main(composer: Composer, state: State) -> None:
     pprint(class_statistics)
 
     if composer.shared.topics_map_filepath:
+        logger.info("Merging topic info to DataFrame.")
         df = merge_topic_info_to_df(
             df,
             train_topic_filepath=composer.shared.train_topic_filepath,
@@ -177,6 +181,7 @@ def main(composer: Composer, state: State) -> None:
         )
 
     if composer.shared.group_by:
+        logger.info("Adding prompt name group to DataFrame.")
         df = add_prompt_name_group(
             df,
             pd.read_csv(composer.shared.predicted_prompt_filepath),
@@ -315,7 +320,7 @@ def main(composer: Composer, state: State) -> None:
     # So you can think of `AutoModel` to be a "backbone" without the head.
     # see https://discuss.huggingface.co/t/difference-between-automodel-and-automodelforlm/5967
 
-    if composer.shared.default:
+    if composer.shared.model_type == "vanilla":
         if composer.shared.pooler_type:
             raise ValueError("Cannot have `default` with `pooler_type`.")
 
@@ -338,11 +343,18 @@ def main(composer: Composer, state: State) -> None:
         #     pooler_dropout=base_model.config.pooler_dropout,
         # )
         # base_model.pooler.apply(init_attention_pooler)
-    else:
+    elif composer.shared.model_type == "SubclassedDebertaV2ForSequenceClassification":
         base_model = SubclassedDebertaV2ForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
             config=base_model_config,
         )
+    elif composer.shared.model_type == "SubclassedDebertaV2ForSequenceClassificationMultiHead":
+        base_model = SubclassedDebertaV2ForSequenceClassificationMultiHead.from_pretrained(
+            pretrained_model_name_or_path=composer.shared.pretrained_model_name_or_path,
+            config=base_model_config,
+        )
+    else:
+        raise ValueError(f"Unsupported model type: {composer.shared.model_type}")
 
     if maybe_resize_token_embeddings(base_model, tokenizer):
         logger.info("Embedding Size Mismatch. Resizing token embeddings.")

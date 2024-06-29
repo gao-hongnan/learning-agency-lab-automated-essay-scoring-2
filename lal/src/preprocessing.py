@@ -81,6 +81,7 @@ def preprocess(
     inference: bool,
     system_prompt: str,
     return_tokenized_text: bool,
+    model_type: str,
     *,  # tokenizer kwargs
     max_length: int,
     truncation: bool,
@@ -128,7 +129,6 @@ def preprocess(
 
     elif task in ["SINGLE_LABEL_CLASSIFICATION", "REGRESSION"]:
         tokenized_sample = tokenizer(
-            # sample["description"],
             sample["full_text"],
             max_length=max_length,
             truncation=truncation,
@@ -138,6 +138,9 @@ def preprocess(
             **kwargs,
         )
         tokenized_sample["labels"] = sample["label"]
+        if model_type == "SubclassedDebertaV2ForSequenceClassificationMultiHead":
+            tokenized_sample["topic_ids"] = sample["topics"]
+
         return tokenized_sample
     else:
         raise ValueError(f"Unsupported task type: {task}")
@@ -174,6 +177,7 @@ def create_dataset(
             "padding": composer.shared.padding,
             "return_tensors": composer.shared.return_tensors,
             "add_special_tokens": composer.shared.add_special_tokens,
+            "model_type": composer.shared.model_type,
         },
     )
     print(ds.column_names)
@@ -185,6 +189,7 @@ def create_dataset(
         composer.shared.label,
         composer.shared.group_by,
         composer.shared.description,
+        composer.shared.topics,
     ]
     existing_columns = [col for col in columns_to_remove if col in ds.column_names]
     ds = ds.remove_columns(existing_columns)

@@ -77,7 +77,7 @@ shared:
   output_hidden_states: true
   output_attentions: false
 
-  default: false
+  model_type: SubclassedDebertaV2ForSequenceClassification
 
   # pooler
   pooler_type: null # CHANGE

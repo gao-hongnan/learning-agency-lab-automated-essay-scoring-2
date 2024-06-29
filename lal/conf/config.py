@@ -148,6 +148,7 @@ class Shared(BaseModel):
     score: str = "score"
     label: str = "label"
     description: str = "description"
+    topics: str = "topics"
 
     ## dataset split
     resample_strategy: Literal["StratifiedKFold", "KFold", "GroupKFold", "StratifiedGroupKFold"] = "StratifiedKFold"
@@ -231,7 +232,7 @@ class Shared(BaseModel):
     verbose: bool = False
     show_model_summary: bool = False
     dry_run: bool = False
-    default: bool = True # default model from hf, no custom model
+    model_type: Literal["vanilla", "SubclassedDebertaV2ForSequenceClassification", "SubclassedDebertaV2ForSequenceClassificationMultiHead"] = "vanilla" # default model from hf, no custom model
 
     load_from: str | None = None
 

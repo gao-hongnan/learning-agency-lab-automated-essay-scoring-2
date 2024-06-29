@@ -56,7 +56,7 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.reinitialize_n_layers_of_backbone=1 \
-      shared.default=False \
+      shared.model_type=SubclassedDebertaV2ForSequenceClassification \
       shared.criterion=cross_entropy \
       shared.criterion_config.weight='[ 2.3039,  0.6107,  0.4593,  0.7347,  2.9737, 18.4904]' \
       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
@@ -118,7 +118,7 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.reinitialize_n_layers_of_backbone=1 \
-      shared.default=False \
+      shared.model_type=SubclassedDebertaV2ForSequenceClassification \
       shared.criterion=cross_entropy \
       shared.criterion_config.weight='[ 2.3039,  0.6107,  0.4593,  0.7347,  2.9737, 18.4904]' \
       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
@@ -179,7 +179,7 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.reinitialize_n_layers_of_backbone=1 \
-      shared.default=False \
+      shared.model_type=SubclassedDebertaV2ForSequenceClassification \
       shared.criterion=mse \
       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
@@ -239,7 +239,7 @@ do
       shared.desired_effective_batch_size=8 \
       shared.enable_mixed_precision=True \
       shared.reinitialize_n_layers_of_backbone=1 \
-      shared.default=False \
+      shared.model_type=SubclassedDebertaV2ForSequenceClassification \
       shared.criterion=mse \
       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
 done
@@ -299,7 +299,7 @@ sleep 600
 #       shared.desired_effective_batch_size=8 \
 #       shared.enable_mixed_precision=True \
 #       shared.reinitialize_n_layers_of_backbone=0 \
-#       shared.default=False \
+#       shared.model_type=SubclassedDebertaV2ForSequenceClassification \
 #       shared.criterion=cross_entropy \
 #       shared.criterion_config.weight='[ 2.3039,  0.6107,  0.4593,  0.7347,  2.9737, 18.4904]' \
 #       shared.pooler_type=null " > $LOG_DIR/nohup_chris_$fold.log 2>&1 &
