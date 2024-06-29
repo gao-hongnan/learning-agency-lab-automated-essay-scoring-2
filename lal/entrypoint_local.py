@@ -647,7 +647,7 @@ def main(composer: Composer, state: State) -> None:
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
         weight_decay=composer.shared.weight_decay,
     )
-    pprint(optimizer)
+    # pprint(optimizer)
 
     scheduler = get_scheduler(
         name=composer.shared.lr_scheduler_type,

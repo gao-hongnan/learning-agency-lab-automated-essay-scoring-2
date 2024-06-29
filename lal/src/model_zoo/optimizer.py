@@ -168,6 +168,7 @@ def get_optimizer_grouped_parameters_by_layer(
         applied = False
         for group_config in group_configs:
             if parameter_name.startswith(group_config["prefix"]):
+                print(f"Applying {group_config['prefix']} to {parameter_name}")
                 layer_lr = group_config.get("base_lr", default_learning_rate)
 
                 if group_config.get("llrd", False):
