@@ -1,6 +1,6 @@
-from typing import List, Type, Dict
+from typing import Dict, List, Set, Type
 
-from torch import nn
+from torch import nn, optim
 
 ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 BLACKLISTED: List[str] = ["bias", "LayerNorm.weight", "LayerNorm.bias"]  # CHANGE AS YOU WISH
@@ -53,10 +53,6 @@ def get_decay_parameter_names(model: nn.Module) -> List[str]:
 # )
 
 # LLRD
-
-import torch
-from torch import nn, optim
-from typing import Dict, Iterator, Tuple, Set
 
 
 def check_optimizer_coverage(model: nn.Module, optimizer: optim.Optimizer) -> None:

@@ -60,9 +60,9 @@ from .src.model_zoo._modeling_deberta_seqcls_v2 import (
     SubclassedDebertaV2ForSequenceClassificationMultiHead,
 )
 from .src.model_zoo.optimizer import (
+    check_optimizer_coverage,
     get_decay_parameter_names,
     get_optimizer_grouped_parameters_by_category,
-    check_optimizer_coverage,
 )
 from .src.model_zoo.scheduler import get_scheduler, get_warmup_steps_from_ratio
 from .src.preprocessing import add_prompt_name_group, create_dataset, merge_topic_info_to_df, preprocess, process_labels
@@ -645,17 +645,19 @@ def main(composer: Composer, state: State) -> None:
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
         weight_decay=composer.shared.weight_decay,
     )
-    check_optimizer_coverage(optimizer, model)
+    check_optimizer_coverage(model=model, optimizer=optimizer)
     pprint(optimizer)
 
     scheduler = get_scheduler(
         name=composer.shared.lr_scheduler_type,
         optimizer=optimizer,
-        num_warmup_steps=composer.shared.warmup_steps
-        if composer.shared.warmup_steps and composer.shared.warmup_steps > 0
-        else get_warmup_steps_from_ratio(
-            total_train_steps=total_train_steps,
-            warmup_ratio=composer.shared.warmup_ratio,
+        num_warmup_steps=(
+            composer.shared.warmup_steps
+            if composer.shared.warmup_steps and composer.shared.warmup_steps > 0
+            else get_warmup_steps_from_ratio(
+                total_train_steps=total_train_steps,
+                warmup_ratio=composer.shared.warmup_ratio,
+            )
         ),
         num_training_steps=total_train_steps,
         scheduler_specific_kwargs=composer.shared.scheduler_specific_kwargs,
