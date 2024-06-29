@@ -184,3 +184,7 @@ https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 -   https://github.com/pytorch/torchtune/blob/main/torchtune/utils/memory.py
 -   https://github.com/meta-llama/llama-recipes/blob/main/src/llama_recipes/utils/train_utils.py
 -   https://github.com/OpenAccess-AI-Collective/axolotl/tree/main?tab=readme-ov-file#debugging-axolotl
+
+## Solutions
+
+-   https://www.kaggle.com/c/commonlitreadabilityprize/discussion/260800

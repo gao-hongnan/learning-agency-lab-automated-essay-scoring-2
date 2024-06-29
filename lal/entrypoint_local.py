@@ -678,14 +678,14 @@ def main(composer: Composer, state: State) -> None:
         trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)  # if None is no ops
         torch.cuda.empty_cache()
 
-        trainer.save_model(output_dir=composer.shared.output_dir)
-        trainer.save_state()
-        tokenizer.save_pretrained(composer.shared.output_dir)
-        model.save_pretrained(composer.shared.output_dir)
-        if hasattr(trainer.model, "base_model") and hasattr(trainer.model.base_model, "model"):
-            logger.info("Likely using PEFT. Saving base model.")
-            pprint(trainer.model.base_model.model)
-            trainer.model.base_model.model.save_pretrained(composer.shared.output_dir)
+        # trainer.save_model(output_dir=composer.shared.output_dir)
+        # trainer.save_state()
+        # tokenizer.save_pretrained(composer.shared.output_dir)
+        # model.save_pretrained(composer.shared.output_dir)
+        # if hasattr(trainer.model, "base_model") and hasattr(trainer.model.base_model, "model"):
+        #     logger.info("Likely using PEFT. Saving base model.")
+        #     pprint(trainer.model.base_model.model)
+        #     trainer.model.base_model.model.save_pretrained(composer.shared.output_dir)
 
     if ALLOW_WANDB and not IS_DEBUG:
         run.config.update(composer.model_dump())
