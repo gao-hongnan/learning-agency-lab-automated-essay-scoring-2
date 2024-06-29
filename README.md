@@ -124,6 +124,7 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 -   https://www.kaggle.com/code/javigallego/deberta-from-the-ground-up-2-approaches
 -   https://www.kaggle.com/code/rhtsingh/utilizing-transformer-representations-efficiently
 -   https://www.kaggle.com/code/rhtsingh/on-stability-of-few-sample-transformer-fine-tuning?scriptVersionId=67176591&cellId=15
+-   https://blog.ml6.eu/the-art-of-pooling-embeddings-c56575114cf8
 
 ## Resampling
 
