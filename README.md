@@ -175,6 +175,7 @@ https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 ## References
 
 -   https://www.kaggle.com/code/vad13irt/optimization-approaches-for-transformers
+-   https://www.kaggle.com/code/rhtsingh/on-stability-of-few-sample-transformer-fine-tuning
 
 ### Profiling
 

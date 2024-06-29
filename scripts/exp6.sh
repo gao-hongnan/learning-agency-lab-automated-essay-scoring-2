@@ -60,7 +60,7 @@ do
         shared.model_type=SubclassedDebertaV2ForSequenceClassification \
         shared.criterion=mse \
         shared.reinitialize_n_layers_of_backbone=1 \
-        shared.pooler_type=null \
+        shared.pooler_type=mean \
         shared.very_custom_optimizer_group=False \
         shared.layer_wise_learning_rate_decay=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
 
