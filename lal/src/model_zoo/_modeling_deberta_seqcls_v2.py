@@ -95,6 +95,7 @@ def _init_weights(module: nn.Module, **kwargs: Any) -> None:
         module.bias.data.zero_()
         module.weight.data.fill_(1.0)
 
+
 class SubclassDebertaV2Config(DebertaV2Config):
     def __init__(
         self,
@@ -149,8 +150,7 @@ class SubclassDebertaV2Config(DebertaV2Config):
         self.pooler_dropout = pooler_dropout
         self.pooler_hidden_act = pooler_hidden_act
 
-        self.cls_type = cls_type,
-
+        self.cls_type = cls_type
 
 
 class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
@@ -205,16 +205,17 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         self.pooler = get_pooler(config)  # Factory method to get pooler
         output_dim = self.pooler.output_dim
 
-
         cls_type = getattr(config, "cls_type", "vanilla")
         self.cls_type = cls_type
         # 3. LOAD REGRESSOR/CLASSIFIER HEAD
         if self.cls_type == "vanilla":
             self.classifier = nn.Linear(output_dim, num_labels)  # NOTE: alias=self.head
-        
+
         if self.cls_type == "topic_id_cls":
             num_topics = getattr(config, "num_topics", 7)
-            self.classifier = nn.ModuleList([nn.Linear(self.pooler.output_dim, self.num_labels) for _ in range(num_topics)])
+            self.classifier = nn.ModuleList(
+                [nn.Linear(self.pooler.output_dim, self.num_labels) for _ in range(num_topics)]
+            )
 
         drop_out = getattr(config, "cls_dropout", None)
         drop_out = self.config.hidden_dropout_prob if drop_out is None else drop_out
@@ -278,7 +279,9 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         topic_ids = topic_ids.flatten()
 
-        logits = torch.stack([self.classifier[topic_ids[idx]](pooled_output[idx]) for idx in range(pooled_output.shape[0])], dim=0)
+        logits = torch.stack(
+            [self.classifier[topic_ids[idx]](pooled_output[idx]) for idx in range(pooled_output.shape[0])], dim=0
+        )
 
         loss = None
         if labels is not None:
