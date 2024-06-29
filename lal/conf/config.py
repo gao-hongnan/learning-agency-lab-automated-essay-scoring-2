@@ -219,7 +219,12 @@ class Shared(BaseModel):
     criterion_config: dict[str, Any] = {}
 
     # optimizer
-    # optimizer_type
+    pooler_lr: float | None = None
+    pooler_weight_decay: float | None = None
+    head_lr: float | None = None
+    head_weight_decay: float | None = None
+    very_custom_optimizer_group: bool = False
+    layerwise_learning_rate_decay_mulitplier: float | None = Field(default=None)
 
     # init config
     init_config: dict[str, Any] = {}
@@ -329,8 +334,6 @@ class Shared(BaseModel):
     desired_effective_batch_size: int = 16 # this means no matter how many gpus, world size or what not, you want a 16 global batch size.
     enable_mixed_precision: bool = True
     scheduler_specific_kwargs: dict[str, Any] = {}
-    very_custom_optimizer_group: bool = False
-    layerwise_learning_rate_decay_mulitplier: float | None = Field(default=None)
     # fmt: on
 
     class Config:

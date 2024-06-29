@@ -61,10 +61,8 @@ do
         shared.criterion=mse \
         shared.reinitialize_n_layers_of_backbone=1 \
         shared.pooler_type=mean \
-        shared.freeze_embeddings=True \
-        shared.freeze_these_layers_indices='[0,1,2]' \
-        shared.very_custom_optimizer_group=False \
-        shared.layerwise_learning_rate_decay_mulitplier=null" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+        shared.very_custom_optimizer_group=True \
+        shared.layerwise_learning_rate_decay_mulitplier=0.95" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
 
     echo $! >> $PID_FILE
 done

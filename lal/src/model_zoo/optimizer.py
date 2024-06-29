@@ -54,11 +54,46 @@ def get_decay_parameter_names(model: nn.Module) -> List[str]:
 
 # LLRD
 
+import torch
+from torch import nn, optim
+from typing import Dict, Iterator, Tuple, Set
+
+
+def check_optimizer_coverage(model: nn.Module, optimizer: optim.Optimizer) -> None:
+    """
+    Checks if all parameters in the given model are covered by the optimizer's parameter groups.
+
+    Args:
+        model (nn.Module): The neural network model.
+        optimizer (optim.Optimizer): The optimizer linked to the model.
+
+    Prints:
+        Outputs the names of parameters that are not covered by any optimizer group.
+        If all parameters are covered, it prints a confirmation message.
+    """
+    # Gather all model parameters with names
+    model_params: Dict[str, nn.Parameter] = {name: param for name, param in model.named_parameters()}
+
+    # Gather all optimizer parameters
+    opt_params: Set[nn.Parameter] = set(param for group in optimizer.param_groups for param in group["params"])
+
+    # Check if all parameters are covered
+    uncovered_params: Dict[str, nn.Parameter] = {
+        name: param for name, param in model_params.items() if param not in opt_params
+    }
+
+    if uncovered_params:
+        print("Some parameters are not covered by the optimizer:")
+        for name in uncovered_params:
+            print(name)
+    else:
+        print("All parameters are covered by the optimizer.")
+
 
 def get_optimizer_grouped_parameters_by_category(
     model: nn.Module,
-    learning_rate: float,
-    weight_decay: float,
+    base_learning_rate: float,
+    default_weight_decay: float,
     layerwise_learning_rate_decay_mulitplier: float = 0.95,
     pooler_lr: float | None = None,
     head_lr: float | None = None,
@@ -67,7 +102,6 @@ def get_optimizer_grouped_parameters_by_category(
 ) -> List[Dict[str, str | float | List[nn.Parameter]]]:
     # LayerNorm.bias is automatically included in no decay since bias is in no decay
     no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
-    handled_parameters = set()
     optimizer_parameter_groups = []
 
     embeddings_group = model.deberta.embeddings
@@ -82,7 +116,7 @@ def get_optimizer_grouped_parameters_by_category(
             if any(nd in parameter_name for nd in no_decay)
         ],
         "weight_decay": 0.0,
-        "lr": learning_rate if head_lr is None else head_lr,
+        "lr": base_learning_rate if head_lr is None else head_lr,
         "name": "head_no_decay",
     }
 
@@ -92,8 +126,8 @@ def get_optimizer_grouped_parameters_by_category(
             for parameter_name, parameter in head_group.named_parameters()
             if not any(nd in parameter_name for nd in no_decay)
         ],
-        "weight_decay": weight_decay if head_weight_decay is None else head_weight_decay,
-        "lr": learning_rate if head_lr is None else head_lr,
+        "weight_decay": default_weight_decay if head_weight_decay is None else head_weight_decay,
+        "lr": base_learning_rate if head_lr is None else head_lr,
         "name": "head_decay",
     }
 
@@ -105,7 +139,7 @@ def get_optimizer_grouped_parameters_by_category(
             if any(nd in parameter_name for nd in no_decay)
         ],
         "weight_decay": 0.0,
-        "lr": learning_rate if pooler_lr is None else pooler_lr,
+        "lr": base_learning_rate if pooler_lr is None else pooler_lr,
         "name": "pooler_no_decay",
     }
 
@@ -115,29 +149,29 @@ def get_optimizer_grouped_parameters_by_category(
             for parameter_name, parameter in pooler_group.named_parameters()
             if not any(nd in parameter_name for nd in no_decay)
         ],
-        "weight_decay": weight_decay if pooler_weight_decay is None else pooler_weight_decay,
-        "lr": learning_rate if pooler_lr is None else pooler_lr,
+        "weight_decay": default_weight_decay if pooler_weight_decay is None else pooler_weight_decay,
+        "lr": base_learning_rate if pooler_lr is None else pooler_lr,
         "name": "pooler_decay",
     }
 
-    optimizer_grouped_parameters = [pooler_no_decay, pooler_decay, head_no_decay, head_decay]
+    optimizer_parameter_groups = [pooler_no_decay, pooler_decay, head_no_decay, head_decay]
     embeddings_and_backbone_group = [embeddings_group] + list(backbone_group)
     embeddings_and_backbone_group.reverse()
 
-    lr = learning_rate
+    embeddings_and_backbone_learning_rate = base_learning_rate
     for index, layer in enumerate(embeddings_and_backbone_group):
-        lr *= layerwise_learning_rate_decay_mulitplier
+        embeddings_and_backbone_learning_rate *= layerwise_learning_rate_decay_mulitplier
         # NOTE: add no decay and decay groups for encoder/backbone
 
-        optimizer_grouped_parameters += [
+        optimizer_parameter_groups += [
             {
                 "params": [
                     parameter
                     for parameter_name, parameter in layer.named_parameters()
                     if not any(nd in parameter_name for nd in no_decay)
                 ],
-                "weight_decay": weight_decay,
-                "lr": lr,
+                "weight_decay": default_weight_decay,
+                "lr": embeddings_and_backbone_learning_rate,
                 "name": f"{layer.__class__.__name__}_{index}_decay",
             },
             {
@@ -147,8 +181,8 @@ def get_optimizer_grouped_parameters_by_category(
                     if any(nd in parameter_name for nd in no_decay)
                 ],
                 "weight_decay": 0.0,
-                "lr": lr,
+                "lr": embeddings_and_backbone_learning_rate,
                 "name": f"{layer.__class__.__name__}_{index}_no_decay",
             },
         ]
-    return optimizer_grouped_parameters
+    return optimizer_parameter_groups
