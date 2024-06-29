@@ -399,6 +399,7 @@ def main(composer: Composer, state: State) -> None:
     # NOTE: dry run of model forward pass
     sample_batch = [tokenized_train_dataset[i] for i in range(2)]
     collated_sample_batch = data_collator(sample_batch)  # 2 samples
+    pprint(collated_sample_batch)
     if composer.shared.dry_run:
         logger.info("Collated sample batch keys: %s", collated_sample_batch.keys())
         logger.info("Collated sample batch input_ids shape: %s", collated_sample_batch["input_ids"].shape)
@@ -421,16 +422,19 @@ def main(composer: Composer, state: State) -> None:
         logger.warning(
             "Be careful as `torchinfo` might MUTATE model init weights, so if you run without `torchinfo` your results from model may differ!"
         )
-        torchinfo.summary(
-            base_model,
-            verbose=1,
-            input_data={
-                "input_ids": collated_sample_batch["input_ids"],
-                "attention_mask": collated_sample_batch["attention_mask"],
-            },
-            dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
-            device=base_model.device,
-        )
+        try:
+            torchinfo.summary(
+                base_model,
+                verbose=1,
+                input_data={
+                    "input_ids": collated_sample_batch["input_ids"],
+                    "attention_mask": collated_sample_batch["attention_mask"],
+                },
+                dtypes=list[torch.LongTensor],  # type: ignore[arg-type]
+                device=base_model.device,
+            )
+        except RuntimeError as exc:
+            logger.exception(msg="Error in torchinfo.summary", exc_info=exc)
 
     if composer.shared.use_lora:
         logger.info(
