@@ -31,7 +31,7 @@ do
         shared.truncation=True \
         shared.output_hidden_states=False \
         shared.output_attentions=False \
-        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
+        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-base \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
         shared.verbose=False \
         shared.seed=42 \
@@ -51,13 +51,13 @@ do
         shared.per_device_eval_batch_size=16 \
         shared.report_to=wandb \
         shared.save_strategy=epoch \
-        shared.save_total_limit=2 \
+        shared.save_total_limit=1 \
         shared.warmup_ratio=0 \
         shared.weight_decay=0.01 \
         shared.desired_effective_batch_size=8 \
         shared.enable_mixed_precision=True \
-        shared.model_type=SubclassedDebertaV2ForSequenceClassification \
-        shared.criterion=smooth_l1_with_mse \
+        shared.model_type=SubclassedDebertaV2ForSequenceClassificationMultiHead \
+        shared.criterion=mse \
         shared.reinitialize_n_layers_of_backbone=0 \
         shared.pooler_type=null \
         shared.very_custom_optimizer_group=False \
@@ -65,4 +65,3 @@ do
 
     echo $! >> $PID_FILE
 done
-
