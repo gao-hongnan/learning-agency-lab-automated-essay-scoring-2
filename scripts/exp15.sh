@@ -55,7 +55,7 @@ do
         shared.save_total_limit=1 \
         shared.warmup_ratio=0 \
         shared.weight_decay=0.01 \
-        shared.scheduler_specific_kwargs={"num_cycles":0.5} \
+        shared.scheduler_specific_kwargs.num_cycles=0.5 \
         shared.desired_effective_batch_size=1 \
         shared.enable_mixed_precision=True \
         shared.model_type=SubclassedDebertaV2ForSequenceClassification \
