@@ -474,6 +474,8 @@ def main(composer: Composer, state: State) -> None:
     total_valid_samples = len(tokenized_valid_dataset) if tokenized_valid_dataset else 0
     local_world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     world_size = get_world_size() if torch.distributed.is_available() and torch.distributed.is_initialized() else 1
+    pprint(world_size)
+
     train_dataloader = DataLoader(  # NOTE: this is for computing and confirming the train steps statistics
         tokenized_train_dataset,
         batch_size=composer.shared.per_device_train_batch_size,
