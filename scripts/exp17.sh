@@ -104,7 +104,7 @@ do
         shared.add_special_tokens=True \
         shared.padding=False \
         shared.truncation=True \
-        shared.output_hidden_states=False \
+        shared.output_hidden_states=True \
         shared.output_attentions=False \
         shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
