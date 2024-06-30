@@ -611,17 +611,6 @@ def main(composer: Composer, state: State) -> None:
     pprint(model)
 
     # NOTE: OPTIMIZER SHENANIGANS
-    grouped_optimizer_params = get_optimizer_grouped_parameters_by_category(
-        model=model,
-        base_learning_rate=composer.shared.learning_rate,
-        default_weight_decay=composer.shared.weight_decay,
-        layerwise_learning_rate_decay_mulitplier=composer.shared.layerwise_learning_rate_decay_mulitplier,
-        pooler_lr=composer.shared.pooler_lr,
-        head_lr=composer.shared.head_lr,
-        pooler_weight_decay=composer.shared.pooler_weight_decay,
-        head_weight_decay=composer.shared.head_weight_decay,
-    )
-
     HF_DEFAULT_DECAY = get_decay_parameter_names(model=model)
     HF_DEFAULT_OPTIMIZER_GROUP = [
         {
@@ -640,8 +629,23 @@ def main(composer: Composer, state: State) -> None:
         },
     ]
 
+    if composer.shared.layerwise_learning_rate_decay_mulitplier and composer.shared.very_custom_optimizer_group:
+        grouped_optimizer_params = get_optimizer_grouped_parameters_by_category(
+            model=model,
+            base_learning_rate=composer.shared.learning_rate,
+            default_weight_decay=composer.shared.weight_decay,
+            layerwise_learning_rate_decay_mulitplier=composer.shared.layerwise_learning_rate_decay_mulitplier,
+            pooler_lr=composer.shared.pooler_lr,
+            head_lr=composer.shared.head_lr,
+            pooler_weight_decay=composer.shared.pooler_weight_decay,
+            head_weight_decay=composer.shared.head_weight_decay,
+        )
+
+    else:
+        grouped_optimizer_params = HF_DEFAULT_OPTIMIZER_GROUP
+
     optimizer = torch.optim.AdamW(
-        HF_DEFAULT_OPTIMIZER_GROUP if not composer.shared.very_custom_optimizer_group else grouped_optimizer_params,
+        grouped_optimizer_params,
         lr=composer.shared.learning_rate,
         eps=composer.shared.adam_epsilon,
         betas=(composer.shared.adam_beta1, composer.shared.adam_beta2),
