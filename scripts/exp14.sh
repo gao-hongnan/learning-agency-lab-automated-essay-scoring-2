@@ -18,7 +18,7 @@ do
     python -m lal.entrypoint_local \
         lal/conf/deberta_reg.yaml \
         shared.task=REGRESSION \
-        shared.job_type=train_with_external \
+        shared.job_type=train \
         shared.num_labels=1 \
         shared.resample_strategy=StratifiedKFold \
         shared.resample_params.n_splits=5 \
@@ -32,7 +32,7 @@ do
         shared.truncation=True \
         shared.output_hidden_states=False \
         shared.output_attentions=False \
-        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
+        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-base \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
         shared.verbose=False \
         shared.seed=42 \
@@ -48,7 +48,7 @@ do
         shared.metric_for_best_model=eval_qwk \
         shared.num_train_epochs=4 \
         shared.optim=adamw_torch \
-        shared.per_device_train_batch_size=4 \
+        shared.per_device_train_batch_size=8 \
         shared.per_device_eval_batch_size=16 \
         shared.report_to=wandb \
         shared.save_strategy=epoch \
@@ -61,7 +61,7 @@ do
         shared.criterion=mse \
         shared.reinitialize_n_layers_of_backbone=1 \
         shared.pooler_type=mean \
-        shared.freeze_embeddings=False \
+        shared.freeze_embeddings=True \
         shared.freeze_these_layers_indices='[0,1]' \
         shared.very_custom_optimizer_group=True \
         shared.layerwise_learning_rate_decay_mulitplier=0.95" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
