@@ -211,8 +211,8 @@ def main(composer: Composer, state: State) -> None:
         stratify_by=composer.shared.stratify_by,
         fold_column=composer.shared.fold_column,
     )
-    pprint(df.groupby(["fold", "label"]).size())
-    df.to_csv(f"{str(composer.shared.output_dir)}/train_df_fold_{composer.shared.fold}.csv", index=False)
+    pprint(df.groupby(["fold", composer.shared.stratify_by]).size())
+    df.to_csv(f"{str(composer.shared.output_dir)}/full_train_data_with_folds.csv", index=False)
 
     # load data based on job type, whether to use external data, or pretrain etc
     train_df, valid_df = load_data(
