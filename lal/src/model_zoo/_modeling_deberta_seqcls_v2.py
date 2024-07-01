@@ -149,6 +149,8 @@ class SubclassedDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):  #
         output_dim = self.pooler.output_dim
 
         # 3. LOAD REGRESSOR/CLASSIFIER HEAD
+
+        # self.classifier = nn.Sequential(nn.Dropout(0.0), nn.Linear(output_dim, 256), nn.Linear(256, num_labels))
         self.classifier = nn.Linear(output_dim, num_labels)  # NOTE: alias=self.head
 
         drop_out = getattr(config, "cls_dropout", None)
