@@ -16,7 +16,7 @@ do
     python -m lal.entrypoint_local \
         lal/conf/deberta_reg.yaml \
         shared.task=REGRESSION \
-        shared.job_type=train_with_external \
+        shared.job_type=train \
         shared.num_labels=1 \
         shared.stratify_by=topics \
         shared.resample_strategy=StratifiedKFold \
