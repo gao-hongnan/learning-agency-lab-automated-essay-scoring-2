@@ -82,6 +82,7 @@ def check_optimizer_coverage(model: nn.Module, optimizer: optim.Optimizer) -> No
         print("Some parameters are not covered by the optimizer:")
         for name in uncovered_params:
             print(name)
+        print("Maybe this is because you froze some layers, if not please check your logic.")
     else:
         print("All parameters are covered by the optimizer.")
 

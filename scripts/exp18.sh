@@ -64,7 +64,7 @@ do
         shared.freeze_embeddings=True \
         shared.freeze_these_layers_indices='[0,1]' \
         shared.very_custom_optimizer_group=True \
-        shared.layer_wise_learning_rate_decay=0.9" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+        shared.layerwise_learning_rate_decay_mulitplier=0.9" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
 
     echo $! >> $PID_FILE
 done

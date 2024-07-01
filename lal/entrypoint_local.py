@@ -621,18 +621,21 @@ def main(composer: Composer, state: State) -> None:
                 parameter
                 for parameter_name, parameter in model.named_parameters()
                 if (parameter_name in HF_DEFAULT_DECAY and parameter.requires_grad)
-            ]
+            ],
+            "weight_decay": composer.shared.weight_decay,
         },
         {
             "params": [
                 parameter
                 for parameter_name, parameter in model.named_parameters()
                 if parameter_name not in HF_DEFAULT_DECAY and parameter.requires_grad
-            ]
+            ],
+            "weight_decay": 0.0,
         },
     ]
 
     if composer.shared.layerwise_learning_rate_decay_mulitplier and composer.shared.very_custom_optimizer_group:
+        logger.info("Using very custom optimizer group with layerwise learning rate decay multiplier.")
         grouped_optimizer_params = get_optimizer_grouped_parameters_by_category(
             model=model,
             base_learning_rate=composer.shared.learning_rate,
