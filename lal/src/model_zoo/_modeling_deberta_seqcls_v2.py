@@ -324,13 +324,8 @@ class SubclassedDebertaV2ForSequenceClassificationMultiHead(DebertaV2PreTrainedM
             backbone_outputs=backbone_outputs, _input_ids=input_ids, _attention_mask=attention_mask
         )
         pooled_output = self.dropout(pooled_output)
-        print(pooled_output.shape)
 
-        pprint(topic_ids)
-        pprint(topic_ids.shape)
         topic_ids = topic_ids.flatten()
-        if topic_ids.dtype != torch.int64:
-            topic_ids = topic_ids.to(torch.int64)
 
         logits = torch.stack(
             [self.classifier[topic_ids[idx]](pooled_output[idx]) for idx in range(pooled_output.shape[0])], dim=0
