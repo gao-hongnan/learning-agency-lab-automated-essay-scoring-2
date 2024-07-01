@@ -30,7 +30,7 @@ do
         shared.add_special_tokens=True \
         shared.padding=False \
         shared.truncation=True \
-        shared.output_hidden_states=False \
+        shared.output_hidden_states=True \
         shared.output_attentions=False \
         shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
@@ -40,7 +40,7 @@ do
         shared.data_seed=null \
         shared.eval_strategy=epoch \
         shared.greater_is_better=True \
-        shared.learning_rate=3e-6 \
+        shared.learning_rate=1e-6 \
         shared.load_best_model_at_end=True \
         shared.logging_first_step=True \
         shared.lr_scheduler_type=cosine \
