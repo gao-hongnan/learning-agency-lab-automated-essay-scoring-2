@@ -30,7 +30,7 @@ do
         shared.add_special_tokens=True \
         shared.padding=False \
         shared.truncation=True \
-        shared.output_hidden_states=True \
+        shared.output_hidden_states=False \
         shared.output_attentions=False \
         shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
@@ -60,7 +60,7 @@ do
         shared.model_type=SubclassedDebertaV2ForSequenceClassificationMultiHead \
         shared.criterion=smooth_l1_with_mse \
         shared.reinitialize_n_layers_of_backbone=1 \
-        shared.pooler_type=attention \
+        shared.pooler_type=null \
         shared.freeze_embeddings=True \
         shared.freeze_these_layers_indices='[0,1]' \
         shared.very_custom_optimizer_group=True \
