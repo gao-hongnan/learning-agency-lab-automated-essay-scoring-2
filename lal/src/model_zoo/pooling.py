@@ -9,23 +9,23 @@ from transformers.models.deberta_v2.modeling_deberta_v2 import DebertaV2Config, 
 
 from .modeling_latent_attention import LatentAttentionModel
 
-# class AttentionHead(nn.Module): # TODO: another implementation of attention pooling?
-#     def __init__(self, in_features, hidden_dim):
-#         super().__init__()
-#         self.in_features = in_features
-#         self.middle_features = hidden_dim
-#         self.W = nn.Linear(in_features, hidden_dim)
-#         self.V = nn.Linear(hidden_dim, 1)
-#         self.out_features = hidden_dim
 
-#     def forward(self, features,attention_mask):
-#         weights_mask = attention_mask.unsqueeze(-1)
-#         att = torch.tanh(self.W(features))
-#         score = self.V(att)
-#         score[attention_mask==0]=-1e4
-#         attention_weights = torch.softmax(score, dim=1)
-#         context_vector = torch.sum(attention_weights*weights_mask*features, dim=1)
-#         return context_vector
+class AttentionHead(nn.Module):  # TODO: another implementation of attention pooling?
+    def __init__(self, in_features, hidden_dim):
+        super().__init__()
+        self.in_features = in_features
+        self.W = nn.Linear(in_features, hidden_dim)
+        self.V = nn.Linear(hidden_dim, 1)
+        self.out_features = hidden_dim
+
+    def forward(self, features, attention_mask):
+        weights_mask = attention_mask.unsqueeze(-1)
+        att = torch.tanh(self.W(features))
+        score = self.V(att)
+        score[attention_mask == 0] = -1e4
+        attention_weights = torch.softmax(score, dim=1)
+        context_vector = torch.sum(attention_weights * weights_mask * features, dim=1)
+        return context_vector
 
 
 class ContextPooler(nn.Module):
