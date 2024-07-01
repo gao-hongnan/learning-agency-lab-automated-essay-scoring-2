@@ -190,6 +190,8 @@ def main(composer: Composer, state: State) -> None:
             df,
             pd.read_csv(composer.shared.predicted_prompt_filepath),
         )
+        df = df[~df["topics"].isin([4, 5])].reset_index(drop=True)
+        pprint(df)
 
     if composer.shared.external_data_filepath:
         external_df = pd.read_csv(composer.shared.external_data_filepath)
