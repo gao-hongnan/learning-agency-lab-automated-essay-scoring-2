@@ -31,7 +31,7 @@ do
         shared.truncation=True \
         shared.output_hidden_states=True \
         shared.output_attentions=False \
-        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-small \
+        shared.pretrained_model_name_or_path=/home/jundazhu/models/deberta-v3-large \
         shared.target_artifacts_dir=$ARTIFACTS_DIR  \
         shared.verbose=False \
         shared.seed=20230310 \
@@ -39,7 +39,7 @@ do
         shared.data_seed=null \
         shared.eval_strategy=epoch \
         shared.greater_is_better=True \
-        shared.learning_rate=1e-5 \
+        shared.learning_rate=3e-6 \
         shared.load_best_model_at_end=True \
         shared.logging_first_step=True \
         shared.lr_scheduler_type=cosine \
@@ -47,7 +47,7 @@ do
         shared.metric_for_best_model=eval_qwk \
         shared.num_train_epochs=4 \
         shared.optim=adamw_torch \
-        shared.per_device_train_batch_size=8 \
+        shared.per_device_train_batch_size=2 \
         shared.per_device_eval_batch_size=16 \
         shared.report_to=wandb \
         shared.save_strategy=epoch \
@@ -55,7 +55,7 @@ do
         shared.warmup_ratio=0.1 \
         shared.weight_decay=0.01 \
         shared.scheduler_specific_kwargs.num_cycles=0.5 \
-        shared.desired_effective_batch_size=8 \
+        shared.desired_effective_batch_size=4 \
         shared.enable_mixed_precision=True \
         shared.model_type=SubclassedDebertaV2ForSequenceClassification \
         shared.criterion=mse \
@@ -64,6 +64,6 @@ do
         shared.freeze_embeddings=True \
         shared.freeze_these_layers_indices='[0,1]' \
         shared.very_custom_optimizer_group=True \
-        shared.layerwise_learning_rate_decay_mulitplier=0.95" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
+        shared.layerwise_learning_rate_decay_mulitplier=0.9" > $LOG_DIR/exp-fold-$FOLD.log 2>&1 &
     echo $! >> $PID_FILE
 done
