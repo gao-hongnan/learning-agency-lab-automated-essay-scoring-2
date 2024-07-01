@@ -1,6 +1,3 @@
-FOLD=0
-TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-ARTIFACTS_DIR="./artifacts/exp1-$TIMESTAMP"
 python -m lal.entrypoint_local \
         lal/conf/deberta_reg.yaml \
         shared.task=REGRESSION \
@@ -10,7 +7,8 @@ python -m lal.entrypoint_local \
         shared.resample_params.n_splits=5 \
         shared.resample_params.shuffle=true \
         shared.resample_params.random_state=42 \
-        shared.fold=$FOLD \
+        shared.fold=0 \
+        shared.cache_dir="./.cache/huggingface" \
         shared.padding_side=right \
         shared.max_length=1024 \
         shared.add_special_tokens=True \
@@ -18,37 +16,39 @@ python -m lal.entrypoint_local \
         shared.truncation=True \
         shared.output_hidden_states=False \
         shared.output_attentions=False \
-        shared.pretrained_model_name_or_path=microsOft/deberta-v3-small \
-        shared.target_artifacts_dir=$ARTIFACTS_DIR  \
+        shared.pretrained_model_name_or_path=microsoft/deberta-v3-small \
+        shared.target_artifacts_dir=./artifacts \
         shared.verbose=False \
-        shared.seed=42 \
+        shared.seed=20230310 \
         shared.adam_epsilon=1e-6 \
         shared.data_seed=null \
         shared.eval_strategy=epoch \
         shared.greater_is_better=True \
-        shared.learning_rate=1e-5 \
+        shared.learning_rate=3e-6 \
         shared.load_best_model_at_end=True \
         shared.logging_first_step=True \
-        shared.lr_scheduler_type=linear \
+        shared.lr_scheduler_type=cosine \
         shared.max_grad_norm=1.0 \
         shared.metric_for_best_model=eval_qwk \
         shared.num_train_epochs=5 \
         shared.optim=adamw_torch \
-        shared.per_device_train_batch_size=8 \
+        shared.per_device_train_batch_size=2 \
         shared.per_device_eval_batch_size=16 \
-        shared.report_to=wandb \
+        shared.report_to=none \
         shared.save_strategy=epoch \
-        shared.save_total_limit=2 \
-        shared.warmup_ratio=0 \
+        shared.save_total_limit=1 \
+        shared.warmup_ratio=0.1 \
         shared.weight_decay=0.01 \
-        shared.desired_effective_batch_size=8 \
+        shared.desired_effective_batch_size=4 \
         shared.enable_mixed_precision=True \
         shared.model_type=SubclassedDebertaV2ForSequenceClassificationMultiHead \
-        shared.criterion=mse \
-        shared.reinitialize_n_layers_of_backbone=0 \
+        shared.criterion=smooth_l1_with_mse \
+        shared.reinitialize_n_layers_of_backbone=1 \
         shared.pooler_type=null \
-        shared.very_custom_optimizer_group=False \
-        shared.layerwise_learning_rate_decay_mulitplier=null
+        shared.freeze_embeddings=True \
+        shared.freeze_these_layers_indices='[0,1]' \
+        shared.very_custom_optimizer_group=True \
+        shared.layer_wise_learning_rate_decay=0.9
 
 # INFO: 2024-06-25 08:36:49,293: __main__  Sanity Check Last Layer Weights: -0.004328871
 # INFO: 2024-06-25 08:36:49,358: __main__  Collated sample batch keys: dict_keys(['input_ids', 'token_type_ids', 'attention_mask', 'labels'])
@@ -101,6 +101,7 @@ python -m lal.entrypoint_local \
     shared.pooler_type=mean \
     shared.reinitialize_n_layers_of_backbone=0 \
     shared.freeze_these_layers_indices='[]' \
-    shared.freeze_embeddings=False
+    shared.freeze_embeddings=False \
+    shared.very_custom_optimizer_group=False
 
 # Validation QWK Score = 0.1040995444950561
