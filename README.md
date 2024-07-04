@@ -138,6 +138,14 @@ Can we inference a model with fp16 but loaded and trained with fp32.
 
 ## Tricks
 
+see:
+
+-   https://www.kaggle.com/code/kojimar/fb3-single-pytorch-model-train
+
+### Adversarial Weight Perturbation
+
+...
+
 ### Grad/Activation Monitor
 
 To combat init weights.
@@ -194,3 +202,22 @@ https://www.kaggle.com/code/batprem/deberta-layerwiselr-lastlayerreini-infer.
 ## Solutions
 
 -   https://www.kaggle.com/c/commonlitreadabilityprize/discussion/260800
+
+## SOME MISC
+
+https://github.com/darraghdog/kaggle-linking-writing-3rd-place-solution/blob/main/models/mdl_ch_4f.py
+https://github.com/chumajin/kaggle-commonlit/blob/main/pooling.py
+https://github.com/rohitsingh02/kaggle-feedback-english-language-learning-1st-place-solution/blob/main/src/optimizer/optimizer.py
+https://github.com/rohitsingh02/kaggle-feedback-english-language-learning-1st-place-solution/blob/main/src/optimizer/parameters.py
+https://github.com/amedprof/Feedback-Prize--English-Language-Learning/blob/main/src/model_zoo/pooling.py
+https://www.kaggle.com/competitions/feedback-prize-english-language-learning/discussion/369609
+https://www.kaggle.com/code/cdeotte/3rd-place-solution-lb-0-4337-cv-0-4420/notebook
+https://github.com/amedprof/Feedback-Prize--English-Language-Learning/blob/main/src/model_zoo/models.py
+https://www.kaggle.com/competitions/commonlit-evaluate-student-summaries/discussion/446573
+https://www.kaggle.com/competitions/commonlit-evaluate-student-summaries/discussion/446776
+https://www.kaggle.com/competitions/feedback-prize-2021/discussion/299517#1643801
+https://www.kaggle.com/code/fightingmuscle/8th-place-various-pooling-etc
+https://www.kaggle.com/competitions/feedback-prize-english-language-learning/discussion/369440
+https://www.kaggle.com/code/kaerunantoka/fb3-private-14th-solution-code/notebook?scriptVersionId=112497983
+https://github.com/osuossu8/FeedbackPrize3/blob/main/exp/024.py
+https://arxiv.org/pdf/1801.06146
